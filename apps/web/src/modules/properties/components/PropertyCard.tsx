@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
+import { getSignedUrl } from '@/lib/storage'
 import { StatusBadge, ListingTypeBadge } from '@/shared/components/Badge'
 import type { Property } from '../property.types'
 import styles from './PropertyCard.module.css'
@@ -10,9 +11,13 @@ interface PropertyCardProps {
 
 export function PropertyCard({ property }: PropertyCardProps) {
   const cover = property.media.find((m) => m.isCover) ?? property.media[0]
-  const coverUrl = cover
-    ? supabase.storage.from('property-media').getPublicUrl(cover.storagePath).data.publicUrl
-    : null
+  const [coverUrl, setCoverUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (cover) {
+      getSignedUrl(cover.storagePath).then(setCoverUrl)
+    }
+  }, [cover?.storagePath])
 
   return (
     <Link to={`/properties/${property.id}`} className={styles.card}>

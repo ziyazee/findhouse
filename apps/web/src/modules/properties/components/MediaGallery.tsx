@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getSignedUrls } from '@/lib/storage'
 import { Button } from '@/shared/components/Button'
 import type { PropertyMedia } from '../property.types'
 import styles from './MediaGallery.module.css'
@@ -16,6 +17,17 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
   const [error, setError] = useState('')
 
   const sorted = [...media].sort((a, b) => a.displayOrder - b.displayOrder)
+  const [urls, setUrls] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const paths = sorted.map((m) => m.storagePath)
+    if (paths.length === 0) return
+    getSignedUrls(paths).then((signed) => {
+      const map: Record<string, string> = {}
+      paths.forEach((p, i) => { if (signed[i]) map[p] = signed[i]! })
+      setUrls(map)
+    })
+  }, [media.length])
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return
@@ -63,10 +75,6 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
     onUpdate()
   }
 
-  function getUrl(path: string) {
-    return supabase.storage.from('property-media').getPublicUrl(path).data.publicUrl
-  }
-
   return (
     <div className={styles.root}>
       {/* Upload zone */}
@@ -98,11 +106,13 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
         <div className={styles.grid}>
           {sorted.map((item) => {
             const isVideo = item.mediaType === 'video'
-            const url = getUrl(item.storagePath)
+            const url = urls[item.storagePath]
 
             return (
               <div key={item.id} className={`${styles.item} ${item.isCover ? styles.coverItem : ''}`}>
-                {isVideo ? (
+                {!url ? (
+                  <div className={styles.thumb} />
+                ) : isVideo ? (
                   <video src={url} className={styles.thumb} muted playsInline />
                 ) : (
                   <img src={url} alt="" className={styles.thumb} loading="lazy" />
