@@ -32,7 +32,7 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
 
       const { error: uploadErr } = await supabase.storage
         .from('property-media')
-        .upload(path, file, { cacheControl: '3600', upsert: false })
+        .upload(path, file, { cacheControl: '31536000', upsert: false })
 
       if (uploadErr) {
         setError(`Upload failed: ${uploadErr.message}`)

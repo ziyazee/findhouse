@@ -147,7 +147,7 @@ async function handleMessage(msg: WAMessage, _phoneNumberId: string) {
 
       const { error: uploadError } = await db.storage
         .from('property-media')
-        .upload(path, bytes, { contentType: mimeType, upsert: false })
+        .upload(path, bytes, { contentType: mimeType, upsert: false, cacheControl: '31536000' })
 
       if (uploadError) {
         console.warn(`[webhook] Media upload failed: ${uploadError.message}`)
