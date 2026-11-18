@@ -1,0 +1,102 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.uploadZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px;
+  background: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--color-fg3);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.uploadZone:hover {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
+  color: var(--color-fg2);
+}
+
+.uploadText {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.uploadHint {
+  font-size: 11px;
+  color: var(--color-fg3);
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-red);
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--color-fg3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.item {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: var(--color-surface);
+  aspect-ratio: 4/3;
+}
+
+.coverItem {
+  border-color: var(--color-accent);
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.coverBadge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--color-accent);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.item:hover .actions {
+  opacity: 1;
+}

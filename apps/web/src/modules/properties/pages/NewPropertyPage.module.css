@@ -1,0 +1,43 @@
+.root {
+  padding: 28px 32px;
+  max-width: 780px;
+}
+
+.header {
+  margin-bottom: 28px;
+}
+
+.back {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--color-fg3);
+  text-decoration: none;
+  margin-bottom: 10px;
+  transition: color 0.12s;
+}
+.back:hover { color: var(--color-fg); }
+
+.title {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-fg);
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--color-fg3);
+  margin-top: 4px;
+}
+
+.formWrap {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 28px 32px;
+}
+
+@media (max-width: 600px) {
+  .root { padding: 16px; }
+  .formWrap { padding: 16px; }
+}

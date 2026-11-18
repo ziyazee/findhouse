@@ -1,0 +1,1757 @@
+<!--- Find House Architecture Plan --->
+<title>Find House – Architecture Plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+  /* === TOKENS === */
+  /* Layout: sticky left nav + scrollable content, single column stacks at mobile */
+  :root {
+    --bg:       #FAFBFC;
+    --surface:  #FFFFFF;
+    --surface2: #F3F5F8;
+    --border:   #E2E6EC;
+    --fg:       #111318;
+    --fg2:      #4A5263;
+    --fg3:      #8892A4;
+    --accent:   #2E6AF0;
+    --accent-s: #EEF3FE;
+    --green:    #16A34A;
+    --green-s:  #DCFCE7;
+    --amber:    #D97706;
+    --amber-s:  #FEF3C7;
+    --red:      #DC2626;
+    --red-s:    #FEE2E2;
+    --purple:   #7C3AED;
+    --purple-s: #EDE9FE;
+    --code-bg:  #F1F4F8;
+    --nav-w:    260px;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:       #0D1117;
+      --surface:  #161B22;
+      --surface2: #1C2330;
+      --border:   #272E3B;
+      --fg:       #E6EDF3;
+      --fg2:      #8B949E;
+      --fg3:      #484F58;
+      --accent:   #4F8EF7;
+      --accent-s: #132040;
+      --green:    #3FB950;
+      --green-s:  #0D2818;
+      --amber:    #F0A030;
+      --amber-s:  #291B00;
+      --red:      #F85149;
+      --red-s:    #2D0F0F;
+      --purple:   #A78BFA;
+      --purple-s: #1E1535;
+      --code-bg:  #1C2330;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:       #0D1117;
+    --surface:  #161B22;
+    --surface2: #1C2330;
+    --border:   #272E3B;
+    --fg:       #E6EDF3;
+    --fg2:      #8B949E;
+    --fg3:      #484F58;
+    --accent:   #4F8EF7;
+    --accent-s: #132040;
+    --green:    #3FB950;
+    --green-s:  #0D2818;
+    --amber:    #F0A030;
+    --amber-s:  #291B00;
+    --red:      #F85149;
+    --red-s:    #2D0F0F;
+    --purple:   #A78BFA;
+    --purple-s: #1E1535;
+    --code-bg:  #1C2330;
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-weight: 600;
+    line-height: 1.3;
+    text-wrap: balance;
+    color: var(--fg);
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: flex;
+    min-height: 100%;
+  }
+
+  .nav {
+    width: var(--nav-w);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0 40px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .nav-brand {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  .nav-brand-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+
+  .nav-brand-sub {
+    font-size: 11px;
+    color: var(--fg3);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .nav-group-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg3);
+    padding: 8px 20px 4px;
+    margin-top: 8px;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 20px;
+    font-size: 13px;
+    color: var(--fg2);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.12s;
+    cursor: pointer;
+  }
+
+  .nav-link:hover {
+    color: var(--fg);
+    background: var(--surface2);
+  }
+
+  .nav-link.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--accent-s);
+    font-weight: 500;
+  }
+
+  .nav-link .nav-num {
+    font-size: 10px;
+    color: var(--fg3);
+    min-width: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* CONTENT */
+  .content {
+    flex: 1;
+    min-width: 0;
+    padding: 48px max(24px, env(safe-area-inset-right, 0px)) 80px max(32px, env(safe-area-inset-left, 0px));
+    max-width: 860px;
+  }
+
+  .section {
+    margin-bottom: 72px;
+    scroll-margin-top: 32px;
+  }
+
+  .section-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    margin-bottom: 12px;
+  }
+
+  .section-lead {
+    font-size: 16px;
+    color: var(--fg2);
+    line-height: 1.7;
+    max-width: 65ch;
+    margin-bottom: 32px;
+  }
+
+  h3.sub {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h4.sub2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg2);
+    margin: 20px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  p { color: var(--fg2); margin-bottom: 12px; max-width: 68ch; }
+  p:last-child { margin-bottom: 0; }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--fg3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .code-lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .code-block pre {
+    padding: 16px;
+    line-height: 1.65;
+    color: var(--fg);
+    white-space: pre;
+  }
+
+  /* CARDS */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .card-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--fg3);
+    line-height: 1.5;
+  }
+
+  /* MODULE CARDS */
+  .module-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 12px 0;
+    border-left: 3px solid var(--accent);
+  }
+
+  .module-card.green  { border-left-color: var(--green); }
+  .module-card.amber  { border-left-color: var(--amber); }
+  .module-card.purple { border-left-color: var(--purple); }
+  .module-card.red    { border-left-color: var(--red); }
+  .module-card.neutral { border-left-color: var(--border); }
+
+  .module-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .module-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .module-path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--fg3);
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  .module-desc { font-size: 13px; color: var(--fg2); margin-bottom: 10px; }
+
+  .module-resp {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .module-resp li {
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    color: var(--fg2);
+  }
+
+  /* TAGS / BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .badge-blue   { background: var(--accent-s); color: var(--accent); }
+  .badge-green  { background: var(--green-s);  color: var(--green);  }
+  .badge-amber  { background: var(--amber-s);  color: var(--amber);  }
+  .badge-red    { background: var(--red-s);    color: var(--red);    }
+  .badge-purple { background: var(--purple-s); color: var(--purple); }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; margin: 16px 0; }
+  table { width: 100%; border-collapse: collapse; min-width: 500px; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg3);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  td {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--fg2);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  td:first-child { color: var(--fg); font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* FLOW */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 16px 0;
+    position: relative;
+  }
+
+  .flow-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 12px 0;
+    position: relative;
+  }
+
+  .flow-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 40px;
+    bottom: -12px;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .flow-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-s);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-variant-numeric: tabular-nums;
+    z-index: 1;
+  }
+
+  .flow-body { padding-top: 4px; }
+  .flow-title { font-size: 14px; font-weight: 600; color: var(--fg); margin-bottom: 2px; }
+  .flow-detail { font-size: 13px; color: var(--fg2); }
+
+  /* CALLOUTS */
+  .callout {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 16px 0;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+    color: var(--fg2);
+    line-height: 1.6;
+  }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout.info   { background: var(--accent-s); border: 1px solid var(--accent); }
+  .callout.warn   { background: var(--amber-s);  border: 1px solid var(--amber);  }
+  .callout.tip    { background: var(--green-s);  border: 1px solid var(--green);  }
+
+  /* PHASE CARDS */
+  .phases { display: flex; flex-direction: column; gap: 16px; margin: 20px 0; }
+  .phase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .phase-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--fg3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .phase-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .phase-duration {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--fg3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 10px;
+  }
+  .phase-body { padding: 16px 20px; }
+  .phase-items { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .phase-items li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--fg2);
+  }
+  .phase-items li::before {
+    content: '→';
+    color: var(--accent);
+    font-size: 12px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* SCHEMA TABLE */
+  .schema-block { margin: 20px 0; }
+  .schema-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-s);
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+  }
+
+  /* TREE */
+  .tree {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: var(--fg);
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+
+  .tree .dim   { color: var(--fg3); }
+  .tree .dir   { color: var(--accent); font-weight: 500; }
+  .tree .file  { color: var(--fg2); }
+  .tree .note  { color: var(--green); }
+  .tree .warn  { color: var(--amber); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .nav {
+      width: 100%;
+      height: auto;
+      position: static;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .nav-brand { display: none; }
+    .nav-group-label { display: none; }
+    .nav-link {
+      white-space: nowrap;
+      padding: 6px 14px;
+      border-left: none;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-link.active { border-left: none; border-bottom-color: var(--accent); }
+    .content { padding: 24px max(16px, env(safe-area-inset-right, 0px)) 60px max(16px, env(safe-area-inset-left, 0px)); }
+    .card-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+
+<div class="layout">
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="nav-brand">
+      <div class="nav-brand-name">Find House</div>
+      <div class="nav-brand-sub">Architecture Plan</div>
+    </div>
+
+    <div class="nav-group-label">Overview</div>
+    <a class="nav-link active" onclick="scrollTo('overview')">
+      <span class="nav-num">01</span> Overview
+    </a>
+    <a class="nav-link" onclick="scrollTo('stack')">
+      <span class="nav-num">02</span> Tech Stack
+    </a>
+    <a class="nav-link" onclick="scrollTo('structure')">
+      <span class="nav-num">03</span> Project Structure
+    </a>
+
+    <a class="nav-link" onclick="scrollTo('auth')">
+      <span class="nav-num">04</span> Authentication
+    </a>
+
+    <div class="nav-group-label">Architecture</div>
+    <a class="nav-link" onclick="scrollTo('modules')">
+      <span class="nav-num">05</span> Modules
+    </a>
+    <a class="nav-link" onclick="scrollTo('schema')">
+      <span class="nav-num">06</span> Database Schema
+    </a>
+    <a class="nav-link" onclick="scrollTo('service-layer')">
+      <span class="nav-num">07</span> Service Layer
+    </a>
+
+    <div class="nav-group-label">Flows</div>
+    <a class="nav-link" onclick="scrollTo('whatsapp-flow')">
+      <span class="nav-num">08</span> WhatsApp Flow
+    </a>
+    <a class="nav-link" onclick="scrollTo('migration')">
+      <span class="nav-num">09</span> Migration Path
+    </a>
+
+    <div class="nav-group-label">Build</div>
+    <a class="nav-link" onclick="scrollTo('phases')">
+      <span class="nav-num">10</span> Build Phases
+    </a>
+  </nav>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- 01 OVERVIEW -->
+    <section class="section" id="overview">
+      <div class="section-eyebrow">01 — Overview</div>
+      <h1 class="section-title">Find House Architecture</h1>
+      <p class="section-lead">A broker productivity platform: React frontend + Supabase backend, built with a clean service layer so migrating to a standalone backend later requires zero component changes.</p>
+
+      <h3 class="sub">Core Principles</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">🔌</div>
+          <div class="card-title">Migration-Ready</div>
+          <div class="card-desc">Components never import Supabase directly. All data access is through the service layer.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">📦</div>
+          <div class="card-title">Modular</div>
+          <div class="card-desc">Each domain is a self-contained module with its own types, services, hooks, and UI.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔒</div>
+          <div class="card-title">Single Responsibility</div>
+          <div class="card-desc">Business logic lives in services. Components only handle rendering and user interaction.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🗂️</div>
+          <div class="card-title">Session-Isolated</div>
+          <div class="card-desc">Property submissions are strictly isolated by session ID, never by message history scanning.</div>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <span>The WhatsApp intake runs via <strong>Supabase Edge Functions</strong> (serverless) today. When we migrate, these Edge Functions become a standalone Express/Fastify server — the service layer contracts stay identical, only the transport changes.</span>
+      </div>
+    </section>
+
+    <!-- 02 STACK -->
+    <section class="section" id="stack">
+      <div class="section-eyebrow">02 — Tech Stack</div>
+      <h2 class="section-title">Technology Decisions</h2>
+      <p class="section-lead">Every technology choice has a clear justification tied to the product requirements.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Technology</th>
+              <th>Role</th>
+              <th>Justification</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>React + Vite</td>
+              <td><span class="badge badge-blue">Frontend</span></td>
+              <td>Dashboard, property pages, admin panel. Vite for fast DX.</td>
+            </tr>
+            <tr>
+              <td>React Router v6</td>
+              <td><span class="badge badge-blue">Routing</span></td>
+              <td>Nested routes for broker/admin dashboards. No framework lock-in.</td>
+            </tr>
+            <tr>
+              <td>TypeScript</td>
+              <td><span class="badge badge-blue">Language</span></td>
+              <td>Service layer contracts enforced at compile time. Safer migration.</td>
+            </tr>
+            <tr>
+              <td>Supabase</td>
+              <td><span class="badge badge-green">Backend</span></td>
+              <td>Auth, Postgres DB, Storage (media), Edge Functions (webhook). Replaces standalone server in Phase 1.</td>
+            </tr>
+            <tr>
+              <td>Supabase Edge Functions</td>
+              <td><span class="badge badge-green">Serverless</span></td>
+              <td>WhatsApp webhook handler, AI processing trigger, notification sender. Deno runtime.</td>
+            </tr>
+            <tr>
+              <td>Supabase Storage</td>
+              <td><span class="badge badge-green">Media</span></td>
+              <td>Property photos and videos. Signed URLs for secure access.</td>
+            </tr>
+            <tr>
+              <td>Supabase Realtime</td>
+              <td><span class="badge badge-green">Live updates</span></td>
+              <td>Broker dashboard updates when property processing completes.</td>
+            </tr>
+            <tr>
+              <td>Anthropic Claude API</td>
+              <td><span class="badge badge-purple">AI</span></td>
+              <td>Property info extraction from unstructured text + photo analysis.</td>
+            </tr>
+            <tr>
+              <td>WhatsApp Business API</td>
+              <td><span class="badge badge-amber">Integration</span></td>
+              <td>Message intake + completion notification. Via Meta Cloud API.</td>
+            </tr>
+            <tr>
+              <td>Zustand</td>
+              <td><span class="badge badge-blue">State</span></td>
+              <td>Minimal client state (auth, UI). No Redux complexity needed.</td>
+            </tr>
+            <tr>
+              <td>TanStack Query</td>
+              <td><span class="badge badge-blue">Data fetching</span></td>
+              <td>Caching, background refetch, optimistic updates for dashboard.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <span><strong>What we're NOT adding:</strong> No GraphQL, no separate CMS, no message queue (yet), no separate media server, no CDN layer. We keep it simple until the product proves out.</span>
+      </div>
+    </section>
+
+    <!-- 03 STRUCTURE -->
+    <section class="section" id="structure">
+      <div class="section-eyebrow">03 — Project Structure</div>
+      <h2 class="section-title">File & Folder Structure</h2>
+      <p class="section-lead">Two top-level workspaces: <code>apps/web</code> (React frontend) and <code>supabase/</code> (Edge Functions + migrations). Each module is a folder that owns everything belonging to that domain.</p>
+
+      <div class="tree">
+<span class="dir">findhouse/</span>
+<span class="dim">├── </span><span class="dir">apps/web/</span>                        <span class="note"># React app (Vite)</span>
+<span class="dim">│   ├── src/</span>
+<span class="dim">│   │   ├── </span><span class="dir">modules/</span>                   <span class="note"># Feature modules (one per domain)</span>
+<span class="dim">│   │   │   ├── </span><span class="dir">auth/</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">AuthService.ts</span>     <span class="note"># Service interface + Supabase impl</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">useAuth.ts</span>         <span class="note"># Hook wrapping the service</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">AuthStore.ts</span>       <span class="note"># Zustand auth state</span>
+<span class="dim">│   │   │   │   ├── </span><span class="dir">pages/</span>
+<span class="dim">│   │   │   │   └── </span><span class="dir">components/</span>
+<span class="dim">│   │   │   │</span>
+<span class="dim">│   │   │   ├── </span><span class="dir">properties/</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">PropertyService.ts</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">useProperties.ts</span>
+span class="dim">│   │   │   │   ├── </span><span class="file">property.types.ts</span>
+<span class="dim">│   │   │   │   ├── </span><span class="dir">pages/</span>
+<span class="dim">│   │   │   │   └── </span><span class="dir">components/</span>
+<span class="dim">│   │   │   │</span>
+<span class="dim">│   │   │   ├── </span><span class="dir">submissions/</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">SubmissionService.ts</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">useSubmissions.ts</span>
+<span class="dim">│   │   │   │   └── </span><span class="file">submission.types.ts</span>
+<span class="dim">│   │   │   │</span>
+<span class="dim">│   │   │   ├── </span><span class="dir">dashboard/</span>
+<span class="dim">│   │   │   │   ├── </span><span class="dir">pages/</span>
+<span class="dim">│   │   │   │   └── </span><span class="dir">components/</span>
+<span class="dim">│   │   │   │</span>
+<span class="dim">│   │   │   ├── </span><span class="dir">property-site/</span>          <span class="note"># Public-facing property website</span>
+<span class="dim">│   │   │   │   ├── </span><span class="file">PropertySitePage.tsx</span>
+<span class="dim">│   │   │   │   └── </span><span class="dir">components/</span>
+<span class="dim">│   │   │   │</span>
+<span class="dim">│   │   │   └── </span><span class="dir">admin/</span>
+<span class="dim">│   │   │       ├── </span><span class="file">AdminService.ts</span>
+<span class="dim">│   │   │       ├── </span><span class="dir">pages/</span>
+<span class="dim">│   │   │       └── </span><span class="dir">components/</span>
+<span class="dim">│   │   │</span>
+<span class="dim">│   │   ├── </span><span class="dir">lib/</span>                       <span class="note"># Third-party adapters (swap here to migrate)</span>
+<span class="dim">│   │   │   ├── </span><span class="file">supabase.ts</span>            <span class="note"># Single Supabase client instance</span>
+<span class="dim">│   │   │   └── </span><span class="file">queryClient.ts</span>         <span class="note"># TanStack Query config</span>
+<span class="dim">│   │   │</span>
+<span class="dim">│   │   ├── </span><span class="dir">shared/</span>                    <span class="note"># Truly shared, domain-agnostic</span>
+<span class="dim">│   │   │   ├── </span><span class="dir">components/</span>            <span class="note"># Button, Input, Modal, etc.</span>
+<span class="dim">│   │   │   ├── </span><span class="dir">hooks/</span>                 <span class="note"># useDebounce, useMediaQuery, etc.</span>
+<span class="dim">│   │   │   └── </span><span class="dir">utils/</span>                 <span class="note"># format, validate, etc.</span>
+<span class="dim">│   │   │</span>
+<span class="dim">│   │   ├── </span><span class="file">router.tsx</span>                 <span class="note"># All routes, guards defined here</span>
+<span class="dim">│   │   └── </span><span class="file">main.tsx</span>                   <span class="note"># Entry, providers</span>
+<span class="dim">│   │</span>
+<span class="dim">│   ├── </span><span class="file">index.html</span>
+<span class="dim">│   ├── </span><span class="file">vite.config.ts</span>
+<span class="dim">│   └── </span><span class="file">package.json</span>
+<span class="dim">│</span>
+<span class="dim">├── </span><span class="dir">supabase/</span>                          <span class="note"># Supabase project config</span>
+<span class="dim">│   ├── </span><span class="dir">functions/</span>                     <span class="note"># Edge Functions (serverless)</span>
+<span class="dim">│   │   ├── </span><span class="dir">whatsapp-webhook/</span>
+<span class="dim">│   │   │   └── </span><span class="file">index.ts</span>               <span class="note"># Receives WA messages, routes to handlers</span>
+<span class="dim">│   │   ├── </span><span class="dir">process-submission/</span>
+<span class="dim">│   │   │   └── </span><span class="file">index.ts</span>               <span class="note"># AI extraction + website generation</span>
+<span class="dim">│   │   ├── </span><span class="dir">send-notification/</span>
+<span class="dim">│   │   │   └── </span><span class="file">index.ts</span>               <span class="note"># Send WA message with property URL</span>
+<span class="dim">│   │   └── </span><span class="dir">_shared/</span>                   <span class="note"># Shared utilities across functions</span>
+<span class="dim">│   │       ├── </span><span class="file">messageClassifier.ts</span>
+<span class="dim">│   │       ├── </span><span class="file">sessionManager.ts</span>
+<span class="dim">│   │       └── </span><span class="file">aiExtractor.ts</span>
+<span class="dim">│   │</span>
+<span class="dim">│   └── </span><span class="dir">migrations/</span>                    <span class="note"># SQL migration files</span>
+<span class="dim">│       ├── </span><span class="file">001_brokers.sql</span>
+<span class="dim">│       ├── </span><span class="file">002_properties.sql</span>
+<span class="dim">│       ├── </span><span class="file">003_submissions.sql</span>
+<span class="dim">│       └── </span><span class="file">004_rls_policies.sql</span>
+<span class="dim">│</span>
+<span class="dim">└── </span><span class="file">package.json</span>                       <span class="note"># Workspace root</span>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">✅</span>
+        <span><strong>Migration rule:</strong> When moving to a standalone backend, only <code>lib/supabase.ts</code> and the service implementation files change. Every module hook, component, and router file stays exactly the same.</span>
+      </div>
+    </section>
+
+    <!-- 04 AUTH -->
+    <section class="section" id="auth">
+      <div class="section-eyebrow">04 — Authentication</div>
+      <h2 class="section-title">Broker &amp; Admin Login</h2>
+      <p class="section-lead">Both brokers and admins authenticate through Supabase Auth (email + password). The role is encoded in the JWT as a custom claim. The same login page reads the claim and redirects accordingly.</p>
+
+      <h3 class="sub">Two Roles, One Auth System</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Property</th><th>Broker</th><th>Admin</th></tr></thead>
+          <tbody>
+            <tr><td>Login URL</td><td><code>/login</code></td><td><code>/login</code> (same page)</td></tr>
+            <tr><td>Redirect after login</td><td><code>/dashboard</code></td><td><code>/admin</code></td></tr>
+            <tr><td>Role claim</td><td><code>app_metadata.role = "broker"</code></td><td><code>app_metadata.role = "admin"</code></td></tr>
+            <tr><td>Account creation</td><td>Self-registration via sign-up form</td><td>Manual — SQL or Supabase dashboard only</td></tr>
+            <tr><td>Broker profile required</td><td>Yes — row must exist in <code>brokers</code> table</td><td>No broker profile</td></tr>
+            <tr><td>RLS access</td><td>Own properties and sessions only</td><td>Service role key via Edge Functions</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <span><code>app_metadata</code> is set server-side only and is included in the JWT automatically. The React app reads <code>session.user.app_metadata.role</code> — it cannot be forged by the user. Brokers who try to access <code>/admin</code> are redirected away by the <code>&lt;AdminRoute&gt;</code> guard.</span>
+      </div>
+
+      <h3 class="sub">Login Flow</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-body">
+            <div class="flow-title">User submits email + password at <code>/login</code></div>
+            <div class="flow-detail">Single login page for both roles. No separate admin URL needed — the role determines where they go.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-body">
+            <div class="flow-title">Supabase Auth validates credentials, returns JWT</div>
+            <div class="flow-detail">JWT payload includes <code>app_metadata.role</code>. Stored in Supabase's own session (localStorage). Automatically refreshed.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-body">
+            <div class="flow-title">Auth store reads the role claim</div>
+            <div class="flow-detail"><code>session.user.app_metadata.role === 'admin'</code> → redirect to <code>/admin</code>. Otherwise → redirect to <code>/dashboard</code>. If no broker record exists yet, redirect to <code>/onboarding</code> to complete profile.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-body">
+            <div class="flow-title">Route guards enforce access on every navigation</div>
+            <div class="flow-detail"><code>&lt;BrokerRoute&gt;</code> requires a valid session + broker role. <code>&lt;AdminRoute&gt;</code> requires admin role. A logged-in broker visiting <code>/admin</code> is bounced to <code>/dashboard</code>.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">Route Guard Implementation</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span>modules/auth/guards.tsx</span>
+        </div>
+        <pre><span style="color:var(--fg3)">// BrokerRoute — requires authenticated broker</span>
+export function BrokerRoute({ children }: { children: ReactNode }) {
+  const { session, role, isLoading } = useAuth();
+  if (isLoading) return &lt;PageSpinner /&gt;;
+  if (!session) return &lt;Navigate to="/login" replace /&gt;;
+  if (role !== 'broker') return &lt;Navigate to="/admin" replace /&gt;;
+  return &lt;&gt;{children}&lt;/&gt;;
+}
+
+<span style="color:var(--fg3)">// AdminRoute — requires admin role</span>
+export function AdminRoute({ children }: { children: ReactNode }) {
+  const { session, role, isLoading } = useAuth();
+  if (isLoading) return &lt;PageSpinner /&gt;;
+  if (!session) return &lt;Navigate to="/login" replace /&gt;;
+  if (role !== 'admin') return &lt;Navigate to="/dashboard" replace /&gt;;
+  return &lt;&gt;{children}&lt;/&gt;;
+}
+
+<span style="color:var(--fg3)">// Usage in router.tsx</span>
+&lt;Route path="/dashboard/*" element={
+  &lt;BrokerRoute&gt;&lt;DashboardLayout /&gt;&lt;/BrokerRoute&gt;
+} /&gt;
+&lt;Route path="/admin/*" element={
+  &lt;AdminRoute&gt;&lt;AdminLayout /&gt;&lt;/AdminRoute&gt;
+} /&gt;</pre>
+      </div>
+
+      <h3 class="sub">Creating the First Admin Account</h3>
+      <p>Admin accounts are never created through the sign-up form. Create them manually in two steps:</p>
+
+      <h4 class="sub2">Step 1 — Create the user in Supabase Auth</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">SQL</span><span>Supabase SQL Editor or psql</span></div>
+        <pre><span style="color:var(--fg3)">-- Option A: Supabase dashboard → Authentication → Users → "Add user"
+-- Then run Step 2 below to set the role.</span>
+
+<span style="color:var(--fg3)">-- Option B: Using the Supabase service role key via API</span>
+-- POST https://&lt;project&gt;.supabase.co/auth/v1/admin/users
+-- Body: { "email": "admin@findhouse.app", "password": "...", "email_confirm": true }</pre>
+      </div>
+
+      <h4 class="sub2">Step 2 — Set the admin role claim</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">SQL</span><span>Run in Supabase SQL Editor</span></div>
+        <pre><span style="color:var(--fg3)">-- Replace the UUID with the user's actual ID from auth.users</span>
+UPDATE auth.users
+SET raw_app_meta_data = raw_app_meta_data || '{"role": "admin"}'::jsonb
+WHERE email = 'admin@findhouse.app';
+
+<span style="color:var(--fg3)">-- Verify</span>
+SELECT id, email, raw_app_meta_data
+FROM auth.users
+WHERE email = 'admin@findhouse.app';</pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <span>The role claim is in <code>raw_app_meta_data</code> (server-side). <strong>Do not</strong> set it in <code>raw_user_meta_data</code> — that is user-editable and would be a security hole. Supabase exposes <code>app_metadata</code> in the JWT as read-only to the client.</span>
+      </div>
+
+      <h3 class="sub">Broker Registration Flow</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span><span>modules/auth/AuthService.ts</span></div>
+        <pre><span style="color:var(--fg3)">// Registration creates two records atomically</span>
+async function registerBroker(email: string, password: string, fullName: string) {
+  <span style="color:var(--fg3)">// 1. Create Supabase Auth user (role defaults to "broker" via a DB trigger)</span>
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw new AuthError(error.message);
+
+  <span style="color:var(--fg3)">// 2. Create broker profile (trigger handles this automatically — see below)</span>
+  <span style="color:var(--fg3)">// The trigger fires on INSERT into auth.users and creates the brokers row.</span>
+  return data.user;
+}</pre>
+      </div>
+
+      <h4 class="sub2">Database trigger — auto-create broker profile on signup</h4>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">SQL</span><span>supabase/migrations/001_brokers.sql</span></div>
+        <pre>CREATE OR REPLACE FUNCTION handle_new_broker()
+RETURNS TRIGGER AS $$
+BEGIN
+  <span style="color:var(--fg3)">-- Only create broker profile if role is not 'admin'</span>
+  IF (NEW.raw_app_meta_data->>'role') IS DISTINCT FROM 'admin' THEN
+    INSERT INTO public.brokers (id, email, full_name)
+    VALUES (
+      NEW.id,
+      NEW.email,
+      COALESCE(NEW.raw_user_meta_data->>'full_name', '')
+    );
+
+    <span style="color:var(--fg3)">-- Set the broker role claim</span>
+    UPDATE auth.users
+    SET raw_app_meta_data = raw_app_meta_data || '{"role": "broker"}'::jsonb
+    WHERE id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_broker();</pre>
+      </div>
+
+      <h3 class="sub">Development Credentials</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Account</th><th>Email</th><th>Password</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Test Broker</td>
+              <td><code>broker@test.findhouse.app</code></td>
+              <td><code>TestBroker@123</code></td>
+              <td><span class="badge badge-blue">broker</span></td>
+            </tr>
+            <tr>
+              <td>Admin</td>
+              <td><code>admin@findhouse.app</code></td>
+              <td><code>AdminFH@2024!</code></td>
+              <td><span class="badge badge-red">admin</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <span>Change the admin password immediately after first login in any environment beyond local dev. Never commit credentials to the repository — store them in a <code>.env.local</code> file that is gitignored.</span>
+      </div>
+
+    </section>
+
+    <!-- 05 MODULES -->
+    <section class="section" id="modules">
+      <div class="section-eyebrow">05 — Modules</div>
+      <h2 class="section-title">Module Breakdown</h2>
+      <p class="section-lead">Seven clearly bounded modules, each with its own service, hooks, and UI. No module reaches into another module's internals.</p>
+
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-name">Auth Module</div>
+          <div class="module-path">modules/auth/</div>
+          <span class="badge badge-blue">Core</span>
+        </div>
+        <div class="module-desc">Broker registration, login, session management, and route protection. Uses Supabase Auth (email/password) with JWT. AdminService handles separate admin access.</div>
+        <ul class="module-resp">
+          <li>Broker sign-up / login</li>
+          <li>Session persistence</li>
+          <li>Protected route guard</li>
+          <li>Password reset</li>
+          <li>Auth context / store</li>
+        </ul>
+      </div>
+
+      <div class="module-card green">
+        <div class="module-header">
+          <div class="module-name">Properties Module</div>
+          <div class="module-path">modules/properties/</div>
+          <span class="badge badge-green">Core</span>
+        </div>
+        <div class="module-desc">The central entity. Manages the full property lifecycle: creation (via AI or manual), editing, status changes, media, and the public property site page.</div>
+        <ul class="module-resp">
+          <li>Property CRUD</li>
+          <li>Status management (available / sold / rented)</li>
+          <li>Media management (upload, delete, reorder)</li>
+          <li>Manual property creation form</li>
+          <li>Public property site rendering</li>
+          <li>Unique shareable URL generation</li>
+        </ul>
+      </div>
+
+      <div class="module-card purple">
+        <div class="module-header">
+          <div class="module-name">Submissions Module</div>
+          <div class="module-path">modules/submissions/</div>
+          <span class="badge badge-purple">WhatsApp</span>
+        </div>
+        <div class="module-desc">Tracks the full lifecycle of a WhatsApp property submission. Session states (IDLE → COLLECTING → PROCESSING → COMPLETED / FAILED), message tracking, and retry logic. This module is read-only on the frontend — writes happen exclusively in Edge Functions.</div>
+        <ul class="module-resp">
+          <li>Submission session state machine</li>
+          <li>Message + media tracking per session</li>
+          <li>Processing status display</li>
+          <li>Retry failed submissions</li>
+          <li>Session isolation enforcement</li>
+        </ul>
+      </div>
+
+      <div class="module-card amber">
+        <div class="module-header">
+          <div class="module-name">WhatsApp Module</div>
+          <div class="module-path">supabase/functions/whatsapp-webhook/</div>
+          <span class="badge badge-amber">Edge Function</span>
+        </div>
+        <div class="module-desc">Serverless webhook receiver. Validates incoming Meta webhook signatures, classifies messages, manages session state, stores messages + media, and triggers the process-submission function when DONE is received.</div>
+        <ul class="module-resp">
+          <li>Webhook signature verification</li>
+          <li>Registered number authorization</li>
+          <li>Message classification (greeting / property / DONE)</li>
+          <li>Session creation + association</li>
+          <li>Media download + storage upload</li>
+          <li>Deduplication via WA message ID</li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <div class="module-header">
+          <div class="module-name">AI Processing Module</div>
+          <div class="module-path">supabase/functions/process-submission/</div>
+          <span class="badge badge-blue">Edge Function</span>
+        </div>
+        <div class="module-desc">Called when a submission session receives DONE. Fetches all messages and media for that session, calls the Claude API to extract structured property information, creates the Property record, and triggers the notification function.</div>
+        <ul class="module-resp">
+          <li>Fetch session messages (by session ID only)</li>
+          <li>AI property extraction via Claude</li>
+          <li>Media categorization</li>
+          <li>Property record creation</li>
+          <li>Failure recording + session state update</li>
+        </ul>
+      </div>
+
+      <div class="module-card neutral">
+        <div class="module-header">
+          <div class="module-name">Dashboard Module</div>
+          <div class="module-path">modules/dashboard/</div>
+          <span class="badge badge-blue">UI</span>
+        </div>
+        <div class="module-desc">Broker's main workspace. Overview of all properties, search/filter, and access to the property management flows. Realtime updates when a submission completes.</div>
+        <ul class="module-resp">
+          <li>Property list + search + filter</li>
+          <li>Submission status feed</li>
+          <li>Realtime processing updates</li>
+          <li>Quick actions (edit, share, delete)</li>
+        </ul>
+      </div>
+
+      <div class="module-card red">
+        <div class="module-header">
+          <div class="module-name">Admin Module</div>
+          <div class="module-path">modules/admin/</div>
+          <span class="badge badge-red">Admin</span>
+        </div>
+        <div class="module-desc">Separate admin workspace, accessible only to admin role users. Manages brokers, monitors all submissions and failures, and inspects WhatsApp activity.</div>
+        <ul class="module-resp">
+          <li>Broker management (list, disable, delete)</li>
+          <li>All submissions monitor</li>
+          <li>Processing failure inspection</li>
+          <li>WhatsApp activity log</li>
+          <li>Platform usage stats</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 05 SCHEMA -->
+    <section class="section" id="schema">
+      <div class="section-eyebrow">06 — Database Schema</div>
+      <h2 class="section-title">Core Data Model</h2>
+      <p class="section-lead">Seven tables. Foreign keys enforce data isolation. Row Level Security (RLS) ensures brokers only see their own data.</p>
+
+      <div class="schema-block">
+        <div class="schema-name">brokers</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td>uuid PK</td><td>Same as Supabase auth.users.id</td></tr>
+              <tr><td>full_name</td><td>text</td><td></td></tr>
+              <tr><td>email</td><td>text unique</td><td></td></tr>
+              <tr><td>is_active</td><td>boolean</td><td>Admin can deactivate</td></tr>
+              <tr><td>created_at</td><td>timestamptz</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="schema-block">
+        <div class="schema-name">whatsapp_numbers</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td>uuid PK</td><td></td></tr>
+              <tr><td>broker_id</td><td>uuid FK → brokers</td><td></td></tr>
+              <tr><td>phone_number</td><td>text unique</td><td>E.164 format (+919876543210)</td></tr>
+              <tr><td>is_verified</td><td>boolean</td><td></td></tr>
+              <tr><td>is_active</td><td>boolean</td><td></td></tr>
+              <tr><td>created_at</td><td>timestamptz</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="schema-block">
+        <div class="schema-name">submission_sessions</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td>uuid PK</td><td>Session ID — the source of truth</td></tr>
+              <tr><td>broker_id</td><td>uuid FK → brokers</td><td></td></tr>
+              <tr><td>whatsapp_number</td><td>text</td><td>Denormalized for fast lookup</td></tr>
+              <tr><td>status</td><td>enum</td><td>IDLE | COLLECTING | PROCESSING | COMPLETED | FAILED</td></tr>
+              <tr><td>property_id</td><td>uuid FK → properties nullable</td><td>Set on COMPLETED</td></tr>
+              <tr><td>started_at</td><td>timestamptz</td><td></td></tr>
+              <tr><td>done_received_at</td><td>timestamptz nullable</td><td></td></tr>
+              <tr><td>completed_at</td><td>timestamptz nullable</td><td></td></tr>
+              <tr><td>failure_reason</td><td>text nullable</td><td></td></tr>
+              <tr><td>retry_count</td><td>int default 0</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="schema-block">
+        <div class="schema-name">session_messages</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td>uuid PK</td><td></td></tr>
+              <tr><td>session_id</td><td>uuid FK → submission_sessions</td><td></td></tr>
+              <tr><td>broker_id</td><td>uuid FK → brokers</td><td></td></tr>
+              <tr><td>wa_message_id</td><td>text unique</td><td>WhatsApp message ID — prevents duplicates</td></tr>
+              <tr><td>message_type</td><td>enum</td><td>text | image | video | document | audio</td></tr>
+              <tr><td>content</td><td>text nullable</td><td>For text messages</td></tr>
+              <tr><td>storage_path</td><td>text nullable</td><td>Supabase Storage path for media</td></tr>
+              <tr><td>wa_media_id</td><td>text nullable</td><td>Original WA media ID</td></tr>
+              <tr><td>received_at</td><td>timestamptz</td><td>WA message timestamp</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="schema-block">
+        <div class="schema-name">properties</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td>uuid PK</td><td></td></tr>
+              <tr><td>broker_id</td><td>uuid FK → brokers</td><td></td></tr>
+              <tr><td>session_id</td><td>uuid FK nullable</td><td>Null for manually created properties</td></tr>
+              <tr><td>slug</td><td>text unique</td><td>URL identifier (auto-generated)</td></tr>
+              <tr><td>title</td><td>text</td><td></td></tr>
+              <tr><td>property_type</td><td>text</td><td>Apartment, Villa, Plot, etc.</td></tr>
+              <tr><td>listing_type</td><td>enum</td><td>sale | rent</td></tr>
+              <tr><td>status</td><td>enum</td><td>available | sold | rented</td></tr>
+              <tr><td>price</td><td>numeric nullable</td><td></td></tr>
+              <tr><td>location</td><td>text nullable</td><td></td></tr>
+              <tr><td>locality</td><td>text nullable</td><td></td></tr>
+              <tr><td>bedrooms</td><td>int nullable</td><td></td></tr>
+              <tr><td>bathrooms</td><td>int nullable</td><td></td></tr>
+              <tr><td>built_up_area</td><td>numeric nullable</td><td>sq ft</td></tr>
+              <tr><td>carpet_area</td><td>numeric nullable</td><td>sq ft</td></tr>
+              <tr><td>furnishing</td><td>text nullable</td><td>unfurnished / semi / fully</td></tr>
+              <tr><td>floor</td><td>text nullable</td><td></td></tr>
+              <tr><td>total_floors</td><td>int nullable</td><td></td></tr>
+              <tr><td>parking</td><td>text nullable</td><td></td></tr>
+              <tr><td>amenities</td><td>text[]</td><td>Array of amenity strings</td></tr>
+              <tr><td>description</td><td>text nullable</td><td>AI-generated or manual</td></tr>
+              <tr><td>raw_data</td><td>jsonb</td><td>Full AI extraction output, preserved</td></tr>
+              <tr><td>created_at</td><td>timestamptz</td><td></td></tr>
+              <tr><td>updated_at</td><td>timestamptz</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="schema-block">
+        <div class="schema-name">property_media</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td>uuid PK</td><td></td></tr>
+              <tr><td>property_id</td><td>uuid FK → properties</td><td></td></tr>
+              <tr><td>media_type</td><td>enum</td><td>image | video</td></tr>
+              <tr><td>storage_path</td><td>text</td><td>Supabase Storage path</td></tr>
+              <tr><td>category</td><td>text nullable</td><td>AI-assigned: exterior, living room, etc.</td></tr>
+              <tr><td>display_order</td><td>int default 0</td><td></td></tr>
+              <tr><td>is_cover</td><td>boolean default false</td><td></td></tr>
+              <tr><td>created_at</td><td>timestamptz</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h4 class="sub2">Row Level Security Rules</h4>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SQL — RLS Policies</span>
+          <span>supabase/migrations/004_rls_policies.sql</span>
+        </div>
+        <pre>-- Brokers can only read/write their own properties
+CREATE POLICY "broker_own_properties" ON properties
+  FOR ALL USING (broker_id = auth.uid());
+
+-- Brokers can only read their own session messages
+CREATE POLICY "broker_own_messages" ON session_messages
+  FOR SELECT USING (broker_id = auth.uid());
+
+-- Public read for property sites (via slug)
+CREATE POLICY "public_property_site" ON properties
+  FOR SELECT USING (status = 'available');
+
+-- Edge functions use service role key (bypasses RLS)</pre>
+      </div>
+    </section>
+
+    <!-- 06 SERVICE LAYER -->
+    <section class="section" id="service-layer">
+      <div class="section-eyebrow">07 — Service Layer</div>
+      <h2 class="section-title">The Migration-Ready Pattern</h2>
+      <p class="section-lead">This is the core architectural decision. Every module defines a TypeScript interface for its service. The current implementation uses Supabase. The future implementation uses REST. Components and hooks never change.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">🔌</span>
+        <span><strong>The rule:</strong> Components import hooks. Hooks import the service. The service imports <code>lib/supabase.ts</code>. Nothing else imports from <code>lib/supabase.ts</code>. To migrate: write a new service implementation, update the factory in <code>lib/services.ts</code>, done.</span>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span>modules/properties/PropertyService.ts</span>
+        </div>
+        <pre><span style="color:var(--fg3)">// Step 1: Define the interface (never changes)</span>
+export interface IPropertyService {
+  getProperties(brokerId: string): Promise&lt;Property[]&gt;;
+  getProperty(id: string): Promise&lt;Property | null&gt;;
+  getPropertyBySlug(slug: string): Promise&lt;Property | null&gt;;
+  createProperty(data: CreatePropertyInput): Promise&lt;Property&gt;;
+  updateProperty(id: string, data: UpdatePropertyInput): Promise&lt;Property&gt;;
+  deleteProperty(id: string): Promise&lt;void&gt;;
+  updateStatus(id: string, status: PropertyStatus): Promise&lt;Property&gt;;
+}
+
+<span style="color:var(--fg3)">// Step 2: Supabase implementation (today)</span>
+export class SupabasePropertyService implements IPropertyService {
+  constructor(private client: SupabaseClient) {}
+
+  async getProperties(brokerId: string): Promise&lt;Property[]&gt; {
+    const { data, error } = await this.client
+      .from('properties')
+      .select('*, property_media(*)')
+      .eq('broker_id', brokerId)
+      .order('created_at', { ascending: false });
+    if (error) throw new ServiceError(error.message);
+    return data.map(toProperty);
+  }
+  <span style="color:var(--fg3)">// ... rest of implementation</span>
+}
+
+<span style="color:var(--fg3)">// Step 3: Factory — the ONLY migration touch point</span>
+export function createPropertyService(): IPropertyService {
+  return new SupabasePropertyService(supabaseClient);
+  <span style="color:var(--fg3)">// Migration: return new RestPropertyService(API_BASE_URL);</span>
+}</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <span>modules/properties/useProperties.ts</span>
+        </div>
+        <pre><span style="color:var(--fg3)">// Hook: calls service, never Supabase directly</span>
+const propertyService = createPropertyService();
+
+export function useProperties() {
+  const { broker } = useAuth();
+  return useQuery({
+    queryKey: ['properties', broker.id],
+    queryFn: () => propertyService.getProperties(broker.id),
+  });
+}
+
+export function useUpdatePropertyStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: PropertyStatus }) =>
+      propertyService.updateStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['properties'] }),
+  });
+}</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript — Future REST implementation</span>
+          <span>modules/properties/PropertyService.rest.ts (written during migration)</span>
+        </div>
+        <pre><span style="color:var(--fg3)">// Migration: write this file, change the factory. Components unchanged.</span>
+export class RestPropertyService implements IPropertyService {
+  constructor(private baseUrl: string) {}
+
+  async getProperties(brokerId: string): Promise&lt;Property[]&gt; {
+    const res = await fetch(`${this.baseUrl}/properties?brokerId=${brokerId}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (!res.ok) throw new ServiceError(await res.text());
+    return res.json();
+  }
+  <span style="color:var(--fg3)">// ... identical interface, different transport</span>
+}</pre>
+      </div>
+    </section>
+
+    <!-- 07 WHATSAPP FLOW -->
+    <section class="section" id="whatsapp-flow">
+      <div class="section-eyebrow">08 — WhatsApp Flow</div>
+      <h2 class="section-title">Submission Lifecycle</h2>
+      <p class="section-lead">The complete journey from a broker's WhatsApp message to a published property website. Each step maps to a specific function and database state change.</p>
+
+      <h3 class="sub">Message Processing Flow</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-body">
+            <div class="flow-title">Webhook Receives Message</div>
+            <div class="flow-detail">Meta sends POST to <code>/functions/v1/whatsapp-webhook</code>. Verify HMAC-SHA256 signature. Acknowledge with 200 immediately (Meta requires &lt;20s response). Process async.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-body">
+            <div class="flow-title">Authorize the Number</div>
+            <div class="flow-detail">Look up the sender's phone number in <code>whatsapp_numbers</code>. If not found or <code>is_active = false</code>, silently drop — no response, no error. Log the attempt.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-body">
+            <div class="flow-title">Deduplicate</div>
+            <div class="flow-detail">Check <code>session_messages.wa_message_id</code>. If already exists, the webhook fired twice — skip. This handles Meta's at-least-once delivery guarantee.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-body">
+            <div class="flow-title">Classify the Message</div>
+            <div class="flow-detail">Determine type: <strong>GREETING</strong> (Hi, Hello, etc.) → no action. <strong>DONE</strong> → finalize session. <strong>PROPERTY_INFO</strong> → proceed. <strong>OTHER</strong> → ignore. Classification uses simple string matching for DONE and GREETING; treats everything else as PROPERTY_INFO.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <div class="flow-body">
+            <div class="flow-title">Session Routing</div>
+            <div class="flow-detail">Find the broker's current <code>COLLECTING</code> session. If none exists → create a new session (status: COLLECTING). If one exists → add message to it. A broker can never have two COLLECTING sessions simultaneously (enforced by unique partial index).</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">6</div>
+          <div class="flow-body">
+            <div class="flow-title">Store Message + Media</div>
+            <div class="flow-detail">Insert row into <code>session_messages</code> with the <code>session_id</code>. For image/video: download media from WhatsApp CDN using the media ID, upload to Supabase Storage at <code>submissions/{session_id}/{wa_message_id}</code>, store the path.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">7</div>
+          <div class="flow-body">
+            <div class="flow-title">DONE Received — Finalize Session</div>
+            <div class="flow-detail">Update session status to <code>PROCESSING</code>. Set <code>done_received_at</code>. No more messages will be added to this session (new property messages will create a new session). Invoke <code>process-submission</code> Edge Function asynchronously.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">8</div>
+          <div class="flow-body">
+            <div class="flow-title">AI Extraction</div>
+            <div class="flow-detail">Fetch all <code>session_messages</code> WHERE <code>session_id = ?</code> only. Build a structured prompt with all text + image URLs. Call Claude API. Parse the structured property JSON response. Never invent data — missing fields stay null.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">9</div>
+          <div class="flow-body">
+            <div class="flow-title">Create Property + Media Records</div>
+            <div class="flow-detail">Insert into <code>properties</code> with the extracted data and the session's <code>broker_id</code>. Generate a unique slug. Insert <code>property_media</code> rows for each media file, with AI-assigned categories. Link <code>submission_sessions.property_id</code>.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">10</div>
+          <div class="flow-body">
+            <div class="flow-title">Session Completed → Send WhatsApp Notification</div>
+            <div class="flow-detail">Update session status to <code>COMPLETED</code>. Invoke <code>send-notification</code> Edge Function with the property URL: <code>https://findhouse.app/p/{slug}</code>. Send the URL back to the exact WhatsApp number that submitted.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sub">Failure Handling</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Failure Point</th><th>Action</th><th>State</th></tr></thead>
+          <tbody>
+            <tr><td>Media download fails</td><td>Retry 3x, then skip that media item. Continue processing.</td><td>Session continues</td></tr>
+            <tr><td>AI extraction fails</td><td>Set session status FAILED, store error in failure_reason. Preserve all messages.</td><td>FAILED — retryable</td></tr>
+            <tr><td>Property creation fails</td><td>Set FAILED. Nothing partial is committed (transaction).</td><td>FAILED — retryable</td></tr>
+            <tr><td>Notification fails</td><td>Property already created. Log failure. Broker sees it in dashboard. Retry notification separately.</td><td>COMPLETED (property exists)</td></tr>
+            <tr><td>DONE without property info</td><td>Detect no PROPERTY_INFO messages in session. Set FAILED with reason. No property created.</td><td>FAILED</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 08 MIGRATION -->
+    <section class="section" id="migration">
+      <div class="section-eyebrow">09 — Migration Path</div>
+      <h2 class="section-title">Supabase → Standalone Backend</h2>
+      <p class="section-lead">The entire migration is designed to happen without touching a single React component. The service layer is the only boundary that changes.</p>
+
+      <h3 class="sub">What Changes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Today (Supabase)</th><th>After Migration</th><th>Changes?</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Components</td>
+              <td>Call hooks</td>
+              <td>Call same hooks</td>
+              <td><span class="badge badge-green">None</span></td>
+            </tr>
+            <tr>
+              <td>Hooks</td>
+              <td>Call service functions</td>
+              <td>Call same service interface</td>
+              <td><span class="badge badge-green">None</span></td>
+            </tr>
+            <tr>
+              <td>Service interfaces</td>
+              <td>TypeScript interfaces</td>
+              <td>Same interfaces</td>
+              <td><span class="badge badge-green">None</span></td>
+            </tr>
+            <tr>
+              <td>Service implementations</td>
+              <td>SupabaseXxxService</td>
+              <td>RestXxxService</td>
+              <td><span class="badge badge-amber">Rewrite (new file)</span></td>
+            </tr>
+            <tr>
+              <td>Service factory</td>
+              <td><code>new SupabasePropertyService()</code></td>
+              <td><code>new RestPropertyService(API_URL)</code></td>
+              <td><span class="badge badge-amber">One line per service</span></td>
+            </tr>
+            <tr>
+              <td>Auth</td>
+              <td>Supabase Auth JWT</td>
+              <td>Backend-issued JWT</td>
+              <td><span class="badge badge-amber">AuthService rewrite</span></td>
+            </tr>
+            <tr>
+              <td>Edge Functions</td>
+              <td>Deno serverless</td>
+              <td>Express/Fastify routes</td>
+              <td><span class="badge badge-amber">Port logic (same business logic)</span></td>
+            </tr>
+            <tr>
+              <td>Database</td>
+              <td>Supabase Postgres</td>
+              <td>Any Postgres</td>
+              <td><span class="badge badge-green">Migrations portable</span></td>
+            </tr>
+            <tr>
+              <td>File storage</td>
+              <td>Supabase Storage</td>
+              <td>S3 / R2 / similar</td>
+              <td><span class="badge badge-amber">StorageService rewrite</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub">Migration Steps (When the Time Comes)</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">A</div>
+          <div class="flow-body">
+            <div class="flow-title">Set up standalone server (Node.js)</div>
+            <div class="flow-detail">Create Express/Fastify app. Port the Edge Functions to route handlers. Same business logic, same database schema.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">B</div>
+          <div class="flow-body">
+            <div class="flow-title">Write REST service implementations</div>
+            <div class="flow-detail">Create <code>RestPropertyService</code>, <code>RestAuthService</code>, etc. implementing the same TypeScript interfaces. Each calls <code>fetch(API_BASE_URL + ...)</code>.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">C</div>
+          <div class="flow-body">
+            <div class="flow-title">Update service factories</div>
+            <div class="flow-detail">In <code>lib/services.ts</code>, change one line per service. Gate it behind an env var to run both in parallel for testing.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">D</div>
+          <div class="flow-body">
+            <div class="flow-title">Migrate data and storage</div>
+            <div class="flow-detail">pg_dump from Supabase Postgres. Migrate media files from Supabase Storage to the new provider. All URLs are stored as paths, not full URLs — update the storage base URL in config.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09 PHASES -->
+    <section class="section" id="phases">
+      <div class="section-eyebrow">10 — Build Phases</div>
+      <h2 class="section-title">Implementation Phases</h2>
+      <p class="section-lead">Build in four phases. Each phase delivers working, testable software. No phase tries to do everything at once.</p>
+
+      <div class="phases">
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num">Phase 1</div>
+            <div class="phase-name">Foundation</div>
+            <div class="phase-duration">~1 week</div>
+          </div>
+          <div class="phase-body">
+            <ul class="phase-items">
+              <li>Supabase project setup — Auth, Database, Storage, Edge Functions</li>
+              <li>Database migrations (all 7 tables + RLS policies)</li>
+              <li>React + Vite project scaffold with TypeScript</li>
+              <li>Folder structure and module layout</li>
+              <li>Service layer interfaces defined (TypeScript only, no implementation yet)</li>
+              <li>Auth module — broker signup, login, session persistence</li>
+              <li>Zustand auth store + protected route guard</li>
+              <li>Base shared components (Button, Input, Layout)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num">Phase 2</div>
+            <div class="phase-name">WhatsApp Intake Pipeline</div>
+            <div class="phase-duration">~2 weeks</div>
+          </div>
+          <div class="phase-body">
+            <ul class="phase-items">
+              <li>WhatsApp webhook Edge Function — signature verification, message routing</li>
+              <li>Message classification (GREETING / DONE / PROPERTY_INFO)</li>
+              <li>Session manager — create, associate, isolate sessions</li>
+              <li>Media download from WhatsApp CDN + upload to Supabase Storage</li>
+              <li>Deduplication via wa_message_id</li>
+              <li>process-submission Edge Function — AI extraction via Claude API</li>
+              <li>Property and property_media record creation</li>
+              <li>send-notification Edge Function — WhatsApp URL notification</li>
+              <li>Failure handling + session status updates</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num">Phase 3</div>
+            <div class="phase-name">Broker Dashboard + Property Site</div>
+            <div class="phase-duration">~2 weeks</div>
+          </div>
+          <div class="phase-body">
+            <ul class="phase-items">
+              <li>PropertyService — Supabase implementation with TanStack Query hooks</li>
+              <li>Dashboard — property list, search, filter, status chips</li>
+              <li>Realtime updates — Supabase Realtime for processing status</li>
+              <li>Property detail page — edit all fields, manage media</li>
+              <li>Manual property creation form</li>
+              <li>Public property site page — <code>/p/:slug</code> accessible without login</li>
+              <li>SubmissionsService — view session history, retry failed submissions</li>
+              <li>Broker profile + WhatsApp number management</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num">Phase 4</div>
+            <div class="phase-name">Admin Dashboard + Polish</div>
+            <div class="phase-duration">~1 week</div>
+          </div>
+          <div class="phase-body">
+            <ul class="phase-items">
+              <li>Admin role setup in Supabase Auth (custom claim)</li>
+              <li>AdminService — broker management, global submission monitoring</li>
+              <li>Admin dashboard — broker list, all submissions, failure inspector</li>
+              <li>WhatsApp activity log view</li>
+              <li>Error boundary and fallback states throughout</li>
+              <li>Loading skeletons, empty states, optimistic updates</li>
+              <li>Mobile responsiveness pass</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">🚀</span>
+        <span><strong>After Phase 2</strong>, a broker can already submit a property via WhatsApp and receive the URL. The dashboard in Phase 3 is the management layer on top of a working core pipeline.</span>
+      </div>
+
+      <hr class="divider">
+
+      <h3 class="sub">What We're Not Building Yet</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Feature</th><th>Reason Deferred</th></tr></thead>
+          <tbody>
+            <tr><td>Inactivity session expiry</td><td>Needs a cron job or pg_cron. Add in Phase 4+ only if brokers report abandoned sessions.</td></tr>
+            <tr><td>Multi-language AI extraction</td><td>Not in scope until brokers request non-English messages.</td></tr>
+            <tr><td>Property analytics / SEO</td><td>Not a marketplace — explicitly out of scope per product vision.</td></tr>
+            <tr><td>Message queue (Redis, SQS)</td><td>Supabase handles concurrency at this scale. Add if webhook volume grows.</td></tr>
+            <tr><td>CDN for media</td><td>Supabase Storage CDN handles it. Add Cloudflare R2 at migration time.</td></tr>
+            <tr><td>Broker mobile app</td><td>WhatsApp is the mobile interface. Dashboard is web-only for now.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  function scrollTo(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateActive(id);
+  }
+
+  function updateActive(id) {
+    document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+    const links = document.querySelectorAll('.nav-link');
+    const ids = ['overview','stack','structure','modules','schema','service-layer','whatsapp-flow','migration','phases'];
+    const idx = ids.indexOf(id);
+    if (idx >= 0 && links[idx]) links[idx].classList.add('active');
+  }
+
+  // Scroll spy
+  const sections = ['overview','stack','structure','auth','modules','schema','service-layer','whatsapp-flow','migration','phases'];
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) updateActive(e.target.id);
+    });
+  }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+</script>
