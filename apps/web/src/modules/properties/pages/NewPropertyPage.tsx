@@ -9,8 +9,8 @@ export default function NewPropertyPage() {
   const navigate = useNavigate()
   const { mutateAsync, isPending } = useCreateProperty()
 
-  async function handleSubmit(data: CreatePropertyInput) {
-    const property = await mutateAsync(data)
+  async function handleSubmit(data: CreatePropertyInput | import('../property.types').UpdatePropertyInput) {
+    const property = await mutateAsync(data as CreatePropertyInput)
     navigate(`/properties/${property.id}`)
   }
 

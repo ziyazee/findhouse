@@ -1,16 +1,11 @@
-import type { SubmissionStatus, MessageType } from '@/lib/database.types'
-
-// Re-export for convenience
-export type { SubmissionStatus, MessageType }
-
-// ── Domain models (camelCase) ─────────────────────────────────────────────────
+export type SubmissionStatus = 'COLLECTING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+export type MessageType = 'text' | 'image' | 'video' | 'command'
 
 export interface Submission {
   id: string
   senderPhone: string
   status: SubmissionStatus
   propertyId: string | null
-  startedAt: string
   completedAt: string | null
   createdAt: string
   messageCount?: number

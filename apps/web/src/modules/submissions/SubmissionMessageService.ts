@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import type { SubmissionMessage } from './submission.types'
-import type { WhatsappSubmissionMessageRow } from '@/lib/database.types'
+import type { Database } from '@/lib/database.types'
+
+type WhatsappSubmissionMessageRow = Database['public']['Tables']['whatsapp_submission_messages']['Row']
 
 // ── Interface ─────────────────────────────────────────────────────────────────
 
@@ -30,7 +32,7 @@ function toMessage(row: WhatsappSubmissionMessageRow): SubmissionMessage {
     id: row.id,
     submissionId: row.submission_id,
     whatsappMessageId: row.whatsapp_message_id,
-    messageType: row.message_type,
+    messageType: row.message_type as SubmissionMessage['messageType'],
     textBody: row.text_body,
     mediaId: row.media_id,
     mediaType: row.media_type,

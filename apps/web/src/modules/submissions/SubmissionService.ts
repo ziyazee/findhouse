@@ -1,8 +1,5 @@
 import { supabase } from '@/lib/supabase'
 import type { Submission, SubmissionStatus } from './submission.types'
-import type { WhatsappSubmissionRow } from '@/lib/database.types'
-
-// ── Interface ─────────────────────────────────────────────────────────────────
 
 export interface ISubmissionService {
   list(options?: { status?: SubmissionStatus }): Promise<Submission[]>
@@ -10,14 +7,12 @@ export interface ISubmissionService {
   updateStatus(id: string, status: SubmissionStatus): Promise<void>
 }
 
-// ── Supabase implementation ───────────────────────────────────────────────────
-
 class SupabaseSubmissionService implements ISubmissionService {
   async list({ status }: { status?: SubmissionStatus } = {}): Promise<Submission[]> {
     let query = supabase
       .from('whatsapp_submissions')
       .select('*')
-      .order('started_at', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (status) query = query.eq('status', status)
 
@@ -43,28 +38,23 @@ class SupabaseSubmissionService implements ISubmissionService {
 
     const { error } = await supabase
       .from('whatsapp_submissions')
-      .update(patch)
+      .update(patch as { status?: string; completed_at?: string })
       .eq('id', id)
 
     if (error) throw new Error(error.message)
   }
 }
 
-// ── Mapper ────────────────────────────────────────────────────────────────────
-
-function toSubmission(row: WhatsappSubmissionRow): Submission {
+function toSubmission(row: { id: string; sender_phone: string; status: string; property_id: string | null; completed_at: string | null; created_at: string }): Submission {
   return {
     id: row.id,
     senderPhone: row.sender_phone,
-    status: row.status,
+    status: row.status as SubmissionStatus,
     propertyId: row.property_id,
-    startedAt: row.started_at,
     completedAt: row.completed_at,
     createdAt: row.created_at,
   }
 }
-
-// ── Factory ───────────────────────────────────────────────────────────────────
 
 export function createSubmissionService(): ISubmissionService {
   return new SupabaseSubmissionService()

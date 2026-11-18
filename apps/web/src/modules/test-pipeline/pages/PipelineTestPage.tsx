@@ -339,7 +339,7 @@ export default function PipelineTestPage() {
                         </span>
                       </div>
                       <div className={styles.sessionItemBot}>
-                        <span className={styles.sessionTime}>{formatRelative(sub.startedAt)}</span>
+                        <span className={styles.sessionTime}>{formatRelative(sub.createdAt)}</span>
                         {sub.completedAt && (
                           <span className={styles.sessionTime}>done {formatRelative(sub.completedAt)}</span>
                         )}
@@ -377,7 +377,7 @@ export default function PipelineTestPage() {
                     </span>
                   </div>
                   <p className={styles.detailMeta}>
-                    Started {formatTime(new Date(selected.startedAt))}
+                    Started {formatTime(new Date(selected.createdAt))}
                     {selected.completedAt && ` · Completed ${formatTime(new Date(selected.completedAt))}`}
                   </p>
                 </div>

@@ -55,7 +55,7 @@ class SupabasePropertyService implements IPropertyService {
     const slug = generateSlug(input.title)
     const { data, error } = await supabase
       .from('properties')
-      .insert({ ...toRow(input), broker_id: brokerId, slug })
+      .insert({ ...toRow(input), title: input.title, broker_id: brokerId, slug })
       .select('*, property_media!property_media_property_id_fkey(*)')
       .single()
 

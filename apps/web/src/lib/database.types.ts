@@ -1,59 +1,301 @@
-// Generated from actual Supabase project: ajvihzaaaqvvuedasmve
-// To regenerate: npx supabase gen types typescript --project-id ajvihzaaaqvvuedasmve > src/lib/database.types.ts
-
-export type SubmissionStatus = 'COLLECTING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-export type MessageType = 'text' | 'image' | 'video' | 'command'
-
-export interface WhatsappSubmissionRow {
-  id: string
-  sender_phone: string
-  status: SubmissionStatus
-  broker_id: string | null
-  property_id: string | null
-  failure_reason: string | null
-  started_at: string
-  completed_at: string | null
-  created_at: string
-}
-
-export interface WhatsappSubmissionMessageRow {
-  id: string
-  submission_id: string
-  whatsapp_message_id: string
-  message_type: MessageType
-  text_body: string | null
-  media_id: string | null
-  media_type: string | null
-  mime_type: string | null
-  media_storage_path: string | null
-  caption: string | null
-  whatsapp_timestamp: string | null
-  created_at: string
-}
-
 export type Database = {
   public: {
     Tables: {
-      whatsapp_submissions: {
-        Row: WhatsappSubmissionRow
-        Insert: Omit<WhatsappSubmissionRow, 'id' | 'created_at' | 'started_at'> & {
-          id?: string
-          started_at?: string
-          created_at?: string
+      brokers: {
+        Row: {
+          id: string
+          phone: string
+          status: string
+          created_at: string
+          updated_at: string
         }
-        Update: Partial<Pick<WhatsappSubmissionRow, 'status' | 'completed_at'>>
+        Insert: {
+          id?: string
+          phone: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          phone?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_submissions: {
+        Row: {
+          id: string
+          broker_id: string | null
+          sender_phone: string
+          status: string
+          property_id: string | null
+          failure_reason: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          broker_id?: string | null
+          sender_phone: string
+          status?: string
+          property_id?: string | null
+          failure_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          broker_id?: string | null
+          sender_phone?: string
+          status?: string
+          property_id?: string | null
+          failure_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_submissions_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "brokers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_submission_messages: {
-        Row: WhatsappSubmissionMessageRow
-        Insert: Omit<WhatsappSubmissionMessageRow, 'id' | 'created_at'> & {
+        Row: {
+          id: string
+          submission_id: string
+          whatsapp_message_id: string
+          message_type: string
+          text_body: string | null
+          caption: string | null
+          media_id: string | null
+          media_type: string | null
+          mime_type: string | null
+          media_storage_path: string | null
+          whatsapp_timestamp: string | null
+          created_at: string
+        }
+        Insert: {
           id?: string
+          submission_id: string
+          whatsapp_message_id: string
+          message_type: string
+          text_body?: string | null
+          caption?: string | null
+          media_id?: string | null
+          media_type?: string | null
+          mime_type?: string | null
+          media_storage_path?: string | null
+          whatsapp_timestamp?: string | null
           created_at?: string
         }
-        Update: Partial<WhatsappSubmissionMessageRow>
+        Update: {
+          id?: string
+          submission_id?: string
+          whatsapp_message_id?: string
+          message_type?: string
+          text_body?: string | null
+          caption?: string | null
+          media_id?: string | null
+          media_type?: string | null
+          mime_type?: string | null
+          media_storage_path?: string | null
+          whatsapp_timestamp?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_submission_messages_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      properties: {
+        Row: {
+          id: string
+          broker_id: string | null
+          session_id: string | null
+          slug: string
+          title: string
+          property_type: string
+          listing_type: string
+          status: string
+          price: number | null
+          deposit: number | null
+          location: string | null
+          locality: string | null
+          bedrooms: number | null
+          bathrooms: number | null
+          balconies: number | null
+          built_up_area: number | null
+          carpet_area: number | null
+          furnishing: string | null
+          floor: string | null
+          total_floors: number | null
+          parking: string | null
+          move_in_date: string | null
+          amenities: string[] | null
+          description: string | null
+          other: Record<string, unknown> | null
+          raw_data: Record<string, unknown> | null
+          cover_image_id: string | null
+          image_classification_status: string | null
+          image_classification_metadata: Record<string, unknown> | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          broker_id?: string | null
+          session_id?: string | null
+          slug: string
+          title: string
+          property_type?: string
+          listing_type?: string
+          status?: string
+          price?: number | null
+          deposit?: number | null
+          location?: string | null
+          locality?: string | null
+          bedrooms?: number | null
+          bathrooms?: number | null
+          balconies?: number | null
+          built_up_area?: number | null
+          carpet_area?: number | null
+          furnishing?: string | null
+          floor?: string | null
+          total_floors?: number | null
+          parking?: string | null
+          move_in_date?: string | null
+          amenities?: string[] | null
+          description?: string | null
+          other?: Record<string, unknown> | null
+          raw_data?: Record<string, unknown> | null
+          cover_image_id?: string | null
+          image_classification_status?: string | null
+          image_classification_metadata?: Record<string, unknown> | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          broker_id?: string | null
+          session_id?: string | null
+          slug?: string
+          title?: string
+          property_type?: string
+          listing_type?: string
+          status?: string
+          price?: number | null
+          deposit?: number | null
+          location?: string | null
+          locality?: string | null
+          bedrooms?: number | null
+          bathrooms?: number | null
+          balconies?: number | null
+          built_up_area?: number | null
+          carpet_area?: number | null
+          furnishing?: string | null
+          floor?: string | null
+          total_floors?: number | null
+          parking?: string | null
+          move_in_date?: string | null
+          amenities?: string[] | null
+          description?: string | null
+          other?: Record<string, unknown> | null
+          raw_data?: Record<string, unknown> | null
+          cover_image_id?: string | null
+          image_classification_status?: string | null
+          image_classification_metadata?: Record<string, unknown> | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "properties_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "brokers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_cover_image_id_fkey"
+            columns: ["cover_image_id"]
+            isOneToOne: false
+            referencedRelation: "property_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_media: {
+        Row: {
+          id: string
+          property_id: string
+          media_type: string
+          storage_path: string
+          category: string | null
+          ai_description: string | null
+          ai_confidence: number | null
+          display_order: number
+          is_cover: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          property_id: string
+          media_type: string
+          storage_path: string
+          category?: string | null
+          ai_description?: string | null
+          ai_confidence?: number | null
+          display_order?: number
+          is_cover?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          property_id?: string
+          media_type?: string
+          storage_path?: string
+          category?: string | null
+          ai_description?: string | null
+          ai_confidence?: number | null
+          display_order?: number
+          is_cover?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_media_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
-    Views: Record<string, unknown>
-    Functions: Record<string, unknown>
-    Enums: Record<string, unknown>
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
   }
 }
