@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getMediaUrl } from '@/lib/storage'
 import { Button } from '@/shared/components/Button'
 import type { PropertyMedia } from '../property.types'
 import styles from './MediaGallery.module.css'
+
+const UPLOAD_API = '/api/upload'
 
 interface MediaGalleryProps {
   propertyId: string
@@ -17,10 +20,6 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
 
   const sorted = [...media].sort((a, b) => a.displayOrder - b.displayOrder)
 
-  function getUrl(path: string) {
-    return supabase.storage.from('property-media').getPublicUrl(path).data.publicUrl
-  }
-
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return
     setUploading(true)
@@ -30,12 +29,13 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
       const ext = file.name.split('.').pop()
       const path = `properties/${propertyId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-      const { error: uploadErr } = await supabase.storage
-        .from('property-media')
-        .upload(path, file, { cacheControl: '31536000', upsert: false })
+      const form = new FormData()
+      form.append('file', file)
+      form.append('key', path)
 
-      if (uploadErr) {
-        setError(`Upload failed: ${uploadErr.message}`)
+      const res = await fetch(UPLOAD_API, { method: 'POST', body: form })
+      if (!res.ok) {
+        setError(`Upload failed: ${await res.text()}`)
         continue
       }
 
@@ -62,7 +62,7 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
   }
 
   async function handleDelete(item: PropertyMedia) {
-    await supabase.storage.from('property-media').remove([item.storagePath])
+    await fetch(`${UPLOAD_API}?key=${encodeURIComponent(item.storagePath)}`, { method: 'DELETE' })
     await supabase.from('property_media').delete().eq('id', item.id)
     onUpdate()
   }
@@ -98,7 +98,7 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
         <div className={styles.grid}>
           {sorted.map((item) => {
             const isVideo = item.mediaType === 'video'
-            const url = getUrl(item.storagePath)
+            const url = getMediaUrl(item.storagePath)
 
             return (
               <div key={item.id} className={`${styles.item} ${item.isCover ? styles.coverItem : ''}`}>

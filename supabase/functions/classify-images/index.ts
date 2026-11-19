@@ -21,7 +21,7 @@ const db = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-const BUCKET              = 'property-media'
+const R2_PUBLIC_URL        = Deno.env.get('R2_PUBLIC_URL')!
 const DOWNLOAD_CONCURRENCY = parseInt(Deno.env.get('CLASSIFY_DOWNLOAD_CONCURRENCY') ?? '4')
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -189,15 +189,13 @@ async function classifyProperty(propertyId: string): Promise<ClassifyResult> {
   const downloadResults = await runBounded(
     unclassified,
     async (row) => {
-      const { data: blob, error } = await db.storage
-        .from(BUCKET)
-        .download(row.storage_path)
+      const res = await fetch(`${R2_PUBLIC_URL}/${row.storage_path}`)
 
-      if (error || !blob) {
-        throw new Error(`Storage download failed for ${row.storage_path}: ${error?.message}`)
+      if (!res.ok) {
+        throw new Error(`R2 download failed for ${row.storage_path}: ${res.status}`)
       }
 
-      const buffer  = await blob.arrayBuffer()
+      const buffer  = await res.arrayBuffer()
       const uint8   = new Uint8Array(buffer)
       const base64  = btoa(
         uint8.reduce((acc, byte) => acc + String.fromCharCode(byte), ''),

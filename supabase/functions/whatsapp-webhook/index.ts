@@ -13,6 +13,7 @@ import {
   mimeToExtension,
 } from '../_shared/whatsappClient.ts'
 import { resolveBroker } from '../_shared/brokerManager.ts'
+import { uploadToR2 } from '../_shared/r2Client.ts'
 import type { WAWebhookPayload, WAMessage, ParsedMessage } from '../_shared/types.ts'
 
 const db = createClient(
@@ -145,12 +146,10 @@ async function handleMessage(msg: WAMessage, _phoneNumberId: string) {
       const ext = mimeToExtension(mimeType)
       const path = `submissions/${sessionId}/${msg.id}.${ext}`
 
-      const { error: uploadError } = await db.storage
-        .from('property-media')
-        .upload(path, bytes, { contentType: mimeType, upsert: false, cacheControl: '31536000' })
+      const result = await uploadToR2(path, bytes, mimeType)
 
-      if (uploadError) {
-        console.warn(`[webhook] Media upload failed: ${uploadError.message}`)
+      if (!result.success) {
+        console.warn(`[webhook] Media upload failed: ${result.error}`)
       } else {
         storagePath = path
       }

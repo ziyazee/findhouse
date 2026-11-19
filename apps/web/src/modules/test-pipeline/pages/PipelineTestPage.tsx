@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { createSubmissionService } from '@/modules/submissions/SubmissionService'
 import { createSubmissionMessageService } from '@/modules/submissions/SubmissionMessageService'
-import { getSignedUrls } from '@/lib/storage'
+import { getMediaUrl } from '@/lib/storage'
 import type { Submission, SubmissionMessage, SubmissionStatus } from '@/modules/submissions/submission.types'
 import styles from './PipelineTestPage.module.css'
 
@@ -108,15 +108,13 @@ export default function PipelineTestPage() {
       const msgs = await messageSvc.getForSubmission(submissionId)
       setMessages(msgs)
 
-      // Batch-sign all media paths
       const paths = msgs
         .map((m) => m.mediaStoragePath)
         .filter((p): p is string => !!p)
 
       if (paths.length > 0) {
-        const urls = await getSignedUrls(paths)
         const map: Record<string, string> = {}
-        paths.forEach((p, i) => { if (urls[i]) map[p] = urls[i]! })
+        paths.forEach((p) => { map[p] = getMediaUrl(p) })
         setMediaUrls(map)
       }
     } catch (err) {
@@ -186,10 +184,8 @@ export default function PipelineTestPage() {
       }))
       setClassifiedMedia(items)
 
-      const paths = items.map((m) => m.storagePath)
-      const urls  = await getSignedUrls(paths)
       const map: Record<string, string> = {}
-      paths.forEach((p, i) => { if (urls[i]) map[p] = urls[i]! })
+      items.forEach((m) => { map[m.storagePath] = getMediaUrl(m.storagePath) })
       setGalleryUrls(map)
     } catch (err) {
       console.error('[PipelineTestPage] fetch gallery:', err)

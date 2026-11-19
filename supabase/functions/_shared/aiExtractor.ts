@@ -40,7 +40,7 @@ Return ONLY valid JSON matching this exact schema. No other text:
 
 export async function extractPropertyData(
   messages: SessionMessage[],
-  supabaseUrl: string,
+  _supabaseUrl?: string,
 ): Promise<ExtractedProperty> {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set')
@@ -63,7 +63,8 @@ export async function extractPropertyData(
   )
 
   for (const img of imageMessages) {
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/property-media/${img.storage_path}`
+    const r2PublicUrl = Deno.env.get('R2_PUBLIC_URL')!
+    const publicUrl = `${r2PublicUrl}/${img.storage_path}`
     contentParts.push({
       type: 'image',
       source: { type: 'url', url: publicUrl },
