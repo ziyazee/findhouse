@@ -1,0 +1,76 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.list { margin: 0; }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-top: 1px solid var(--color-border);
+}
+.list .row:first-child { border-top: 0; }
+.row:only-child, :global(header) + .row { border-top: 0; }
+
+.row dt { font-size: var(--text-base); color: var(--color-fg2); }
+.row dd { font-size: var(--text-base); font-weight: 600; color: var(--color-fg); text-align: right; }
+.num { font-variant-numeric: tabular-nums; }
+
+.prefTitle { font-size: var(--text-base); font-weight: 600; }
+.prefText { font-size: var(--text-sm); color: var(--color-fg3); }
+
+.segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--color-field);
+  flex-shrink: 0;
+}
+.segment button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-fg2);
+}
+.segment button:hover { color: var(--color-fg); }
+.segment button[aria-pressed='true'] { background: var(--color-accent); color: var(--color-on-accent); box-shadow: 0 6px 14px -8px rgba(var(--brand-rgb), 0.6); }
+
+.swatches { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.swatch {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--swatch);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.swatch:hover { transform: scale(1.08); }
+.swatch[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--swatch); }
+.swatch:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 5px; }
+
+@media (max-width: 560px) {
+  .stack { gap: 16px; }
+  .row { flex-wrap: wrap; padding: 14px 16px; }
+  .row > .segment, .row > button { width: 100%; }
+  .swatches { width: 100%; display: grid; grid-template-columns: repeat(5, 40px); justify-content: space-between; row-gap: 14px; }
+  .swatch { width: 40px; height: 40px; }
+  .segment button { flex: 1; justify-content: center; height: 40px; }
+}

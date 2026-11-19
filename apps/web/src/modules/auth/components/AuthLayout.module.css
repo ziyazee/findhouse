@@ -1,169 +1,98 @@
-.root {
-  display: flex;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: var(--color-bg);
-}
+.root { display: flex; min-height: 100vh; min-height: 100dvh; background: var(--color-bg); }
 
-/* ── Brand panel ─────────────────────────────────────────────────── */
 .brand {
-  width: 420px;
-  flex-shrink: 0;
-  background: #0c1a3a;
-  position: relative;
-  overflow: hidden;
+  flex: 1 1 50%;
+  max-width: 720px;
   display: flex;
-  flex-direction: column;
-}
-
-@media (prefers-color-scheme: dark) {
-  .brand { background: #060e20; }
+  background: var(--color-canvas);
+  border-right: 1px solid var(--color-border);
 }
 
 .brandInner {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 100%;
-  padding: 40px 44px 48px;
-  position: relative;
-  z-index: 1;
+  gap: 40px;
+  width: 100%;
+  padding: 40px 56px;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.logo, .mobileLogo { display: flex; align-items: center; gap: 10px; }
 
-.houseIcon {
-  width: 26px;
-  height: 26px;
-  color: #6a9ef5;
+.logoMark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: #fff;
 }
+.logoMark img { display: block; height: 20px; width: auto; }
 
-.logoName {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.3px;
-}
+.logoName { font-size: 15px; font-weight: 700; color: var(--color-accent); letter-spacing: 0.2em; text-transform: uppercase; }
 
-.brandBody {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 16px;
-  padding: 56px 0;
-}
+.brandBody { max-width: 460px; }
 
 .brandHeadline {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 30px;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 1.25;
-  letter-spacing: -0.5px;
-  text-wrap: balance;
-  max-width: 18ch;
+  font-size: clamp(28px, 2.8vw, 36px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 
-.brandSub {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.55);
-  line-height: 1.6;
-  max-width: 30ch;
-}
+.brandSub { margin-top: 12px; font-size: var(--text-md); line-height: 1.55; color: var(--color-fg2); }
 
-.brandStats {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.stat {
+.steps {
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  margin-top: 36px;
+  padding: 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.statNum {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  color: #6a9ef5;
-  letter-spacing: -0.2px;
-}
-
-.statLabel {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.statDivider {
-  width: 1px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
-}
-
-/* Decorative dot grid */
-.grid {
-  position: absolute;
-  bottom: -20px;
-  right: -20px;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 18px;
-  opacity: 0.12;
-  pointer-events: none;
-}
-
-.gridDot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #ffffff;
-}
-
-/* ── Form panel ──────────────────────────────────────────────────── */
-.formPanel {
-  flex: 1;
+.step {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 40px max(24px, env(safe-area-inset-right, 0px)) 40px max(24px, env(safe-area-inset-left, 0px));
-  overflow-y: auto;
+  gap: 14px;
+  padding: 12px;
 }
+.step + .step { border-top: 1px solid var(--color-border); }
 
-.formInner {
-  width: 100%;
-  max-width: 400px;
-}
-
-/* Mobile logo — hidden on desktop */
-.mobileLogo {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 32px;
-}
-
-.mobileLogo .houseIcon {
+.stepIcon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
   color: var(--color-accent);
 }
 
-.mobileLogo .logoName {
-  color: var(--color-fg);
-}
+.stepTitle { display: block; font-size: var(--text-base); font-weight: 600; color: var(--color-fg); }
+.stepText { display: block; font-size: var(--text-sm); color: var(--color-fg2); }
 
-/* ── Responsive ──────────────────────────────────────────────────── */
-@media (max-width: 768px) {
+.footnote { font-size: var(--text-sm); color: var(--color-fg3); }
+
+.formPanel {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--color-bg);
+}
+.formInner { width: 100%; max-width: 380px; }
+
+.mobileLogo { display: none; margin-bottom: 32px; }
+
+@media (max-width: 900px) {
   .brand { display: none; }
   .mobileLogo { display: flex; }
-  .formPanel { align-items: flex-start; padding-top: 48px; }
 }

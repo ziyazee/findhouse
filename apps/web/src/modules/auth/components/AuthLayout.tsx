@@ -1,77 +1,61 @@
 import { type ReactNode } from 'react'
+import { Camera, Link2, Send } from 'lucide-react'
+import logoMark from '@/assets/logo-mark.png'
 import styles from './AuthLayout.module.css'
 
 interface AuthLayoutProps {
   children: ReactNode
 }
 
+const STEPS = [
+  { icon: <Camera size={18} />, title: 'Send photos and details', text: 'From your phone, to one WhatsApp number.' },
+  { icon: <Send size={18} />, title: 'Reply “done”', text: 'FindHouse reads the details and sorts the photos.' },
+  { icon: <Link2 size={18} />, title: 'Share the listing', text: 'Every property gets its own page to send to tenants.' },
+]
+
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className={styles.root}>
-      {/* Left brand panel */}
-      <aside className={styles.brand} aria-hidden="true">
+      <aside className={styles.brand}>
         <div className={styles.brandInner}>
           <div className={styles.logo}>
-            <HouseIcon />
-            <span className={styles.logoName}>Find House</span>
+            <span className={styles.logoMark} aria-hidden="true"><img src={logoMark} alt="" /></span>
+            <span className={styles.logoName}>FindHouse</span>
           </div>
 
           <div className={styles.brandBody}>
-            <p className={styles.brandHeadline}>
-              Property management, simplified.
-            </p>
+            <h2 className={styles.brandHeadline}>Every rental, listed straight from WhatsApp.</h2>
             <p className={styles.brandSub}>
-              Send property details on WhatsApp. Get a shareable listing page in minutes.
+              Manage your properties, track what’s rented and share listings, all in one place.
             </p>
+
+            <ol className={styles.steps}>
+              {STEPS.map((s) => (
+                <li key={s.title} className={styles.step}>
+                  <span className={styles.stepIcon} aria-hidden="true">{s.icon}</span>
+                  <span>
+                    <span className={styles.stepTitle}>{s.title}</span>
+                    <span className={styles.stepText}>{s.text}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
           </div>
 
-          <div className={styles.brandStats}>
-            <div className={styles.stat}>
-              <span className={styles.statNum}>WhatsApp</span>
-              <span className={styles.statLabel}>first workflow</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNum}>Auto</span>
-              <span className={styles.statLabel}>property pages</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNum}>AI</span>
-              <span className={styles.statLabel}>data extraction</span>
-            </div>
-          </div>
-
-          {/* Decorative grid */}
-          <div className={styles.grid} aria-hidden="true">
-            {Array.from({ length: 48 }).map((_, i) => (
-              <div key={i} className={styles.gridDot} />
-            ))}
-          </div>
+          <p className={styles.footnote}>© FindHouse</p>
         </div>
       </aside>
 
-      {/* Right form panel */}
       <main className={styles.formPanel}>
         <div className={styles.formInner}>
-          {/* Mobile-only logo */}
           <div className={styles.mobileLogo}>
-            <HouseIcon />
-            <span className={styles.logoName}>Find House</span>
+            <span className={styles.logoMark} aria-hidden="true"><img src={logoMark} alt="" /></span>
+            <span className={styles.logoName}>FindHouse</span>
           </div>
 
           {children}
         </div>
       </main>
     </div>
-  )
-}
-
-function HouseIcon() {
-  return (
-    <svg className={styles.houseIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
   )
 }

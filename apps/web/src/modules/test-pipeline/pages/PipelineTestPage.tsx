@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { createSubmissionService } from '@/modules/submissions/SubmissionService'
 import { createSubmissionMessageService } from '@/modules/submissions/SubmissionMessageService'
@@ -31,11 +32,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 const CLASS_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING:         { label: 'Classification pending',  color: '#8892A4', bg: '#F1F5F9' },
-  PROCESSING:      { label: 'Classifying images…',     color: '#D97706', bg: '#FEF3C7' },
-  COMPLETED:       { label: 'Images classified',       color: '#16A34A', bg: '#DCFCE7' },
-  PARTIAL_FAILURE: { label: 'Partial failure',         color: '#EA580C', bg: '#FFF7ED' },
-  FAILED:          { label: 'Classification failed',   color: '#DC2626', bg: '#FEE2E2' },
+  PENDING:         { label: 'Classification pending',  color: 'var(--color-fg2)',   bg: 'var(--color-surface)' },
+  PROCESSING:      { label: 'Classifying images…',     color: 'var(--color-amber)', bg: 'var(--color-amber-soft)' },
+  COMPLETED:       { label: 'Images classified',       color: 'var(--color-green)', bg: 'var(--color-green-soft)' },
+  PARTIAL_FAILURE: { label: 'Partial failure',         color: 'var(--color-amber)', bg: 'var(--color-amber-soft)' },
+  FAILED:          { label: 'Classification failed',   color: 'var(--color-red)', bg: 'var(--color-red-soft)' },
 }
 
 const submissionSvc = createSubmissionService()
@@ -44,10 +45,10 @@ const messageSvc = createSubmissionMessageService()
 // ── Status config ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<SubmissionStatus, { label: string; color: string; bg: string }> = {
-  COLLECTING:  { label: 'Collecting',  color: '#2E6AF0', bg: '#EEF3FE' },
-  PROCESSING:  { label: 'Processing',  color: '#D97706', bg: '#FEF3C7' },
-  COMPLETED:   { label: 'Completed',   color: '#16A34A', bg: '#DCFCE7' },
-  FAILED:      { label: 'Failed',      color: '#DC2626', bg: '#FEE2E2' },
+  COLLECTING:  { label: 'Collecting',  color: 'var(--color-accent)', bg: 'var(--color-accent-soft)' },
+  PROCESSING:  { label: 'Processing',  color: 'var(--color-amber)', bg: 'var(--color-amber-soft)' },
+  COMPLETED:   { label: 'Completed',   color: 'var(--color-green)', bg: 'var(--color-green-soft)' },
+  FAILED:      { label: 'Failed',      color: 'var(--color-red)', bg: 'var(--color-red-soft)' },
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -55,6 +56,7 @@ const STATUS_CONFIG: Record<SubmissionStatus, { label: string; color: string; bg
 export default function PipelineTestPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const detailRef = useRef<HTMLElement>(null)
   const [messages, setMessages] = useState<SubmissionMessage[]>([])
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({})
   const [loadingSubmissions, setLoadingSubmissions] = useState(true)
@@ -261,12 +263,13 @@ export default function PipelineTestPage() {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
+          <Link to="/dashboard" className={styles.backLink}>← Back to overview</Link>
           <div className={styles.headerTitle}>
             <PipelineIcon />
             <h1>Pipeline Monitor</h1>
           </div>
           <p className={styles.headerSub}>
-            Live view of WhatsApp property submissions. Updates in real time.
+            Real-time view of WhatsApp submissions, AI extraction and image classification.
           </p>
         </div>
         <div className={styles.headerRight}>
@@ -284,14 +287,20 @@ export default function PipelineTestPage() {
       {/* Stats */}
       <div className={styles.stats}>
         {(['COLLECTING', 'PROCESSING', 'COMPLETED', 'FAILED'] as const).map((s) => (
-          <div key={s} className={styles.statCard} style={{ borderTopColor: STATUS_CONFIG[s].color }}>
-            <span className={styles.statNum} style={{ color: STATUS_CONFIG[s].color }}>{counts[s]}</span>
-            <span className={styles.statLabel}>{STATUS_CONFIG[s].label}</span>
+          <div key={s} className={styles.statCard}>
+            <span className={styles.statLabel}>
+              <span className={styles.statDot} style={{ background: STATUS_CONFIG[s].color }} />
+              {STATUS_CONFIG[s].label}
+            </span>
+            <span className={styles.statNum}>{counts[s]}</span>
           </div>
         ))}
-        <div className={styles.statCard} style={{ borderTopColor: '#8892A4' }}>
+        <div className={styles.statCard}>
+          <span className={styles.statLabel}>
+            <span className={styles.statDot} style={{ background: 'var(--color-fg3)' }} />
+            Total
+          </span>
           <span className={styles.statNum}>{submissions.length}</span>
-          <span className={styles.statLabel}>Total</span>
         </div>
       </div>
 
@@ -326,7 +335,12 @@ export default function PipelineTestPage() {
                   <li key={sub.id}>
                     <button
                       className={`${styles.sessionItem} ${selectedId === sub.id ? styles.selectedItem : ''}`}
-                      onClick={() => setSelectedId(sub.id)}
+                      onClick={() => {
+                        setSelectedId(sub.id)
+                        if (window.matchMedia('(max-width: 760px)').matches) {
+                          requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+                        }
+                      }}
                     >
                       <div className={styles.sessionItemTop}>
                         <span className={styles.sessionPhone}>{sub.senderPhone}</span>
@@ -349,7 +363,7 @@ export default function PipelineTestPage() {
         </aside>
 
         {/* Detail */}
-        <section className={styles.detail}>
+        <section className={styles.detail} ref={detailRef}>
           {!selected ? (
             <div className={styles.emptyDetail}>
               <SelectIcon />
@@ -442,58 +456,12 @@ export default function PipelineTestPage() {
                         </div>
                       </div>
                       <div className={styles.propGrid}>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Price</span>
-                          <span className={styles.propFieldValue}>{propertyData.price != null ? `₹${Number(propertyData.price).toLocaleString('en-IN')}` : <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Deposit</span>
-                          <span className={styles.propFieldValue}>{propertyData.deposit != null ? `₹${Number(propertyData.deposit).toLocaleString('en-IN')}` : <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Location</span>
-                          <span className={styles.propFieldValue}>{propertyData.location || <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Locality</span>
-                          <span className={styles.propFieldValue}>{propertyData.locality || <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Bedrooms</span>
-                          <span className={styles.propFieldValue}>{propertyData.bedrooms ?? <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Bathrooms</span>
-                          <span className={styles.propFieldValue}>{propertyData.bathrooms ?? <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Balconies</span>
-                          <span className={styles.propFieldValue}>{propertyData.balconies ?? <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Built-up Area</span>
-                          <span className={styles.propFieldValue}>{propertyData.builtUpArea != null ? `${propertyData.builtUpArea} sq ft` : <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Carpet Area</span>
-                          <span className={styles.propFieldValue}>{propertyData.carpetArea != null ? `${propertyData.carpetArea} sq ft` : <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Furnishing</span>
-                          <span className={styles.propFieldValue}>{propertyData.furnishing || <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Floor</span>
-                          <span className={styles.propFieldValue}>{propertyData.floor ?? <em>—</em>}{propertyData.totalFloors != null ? ` of ${propertyData.totalFloors}` : ''}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Parking</span>
-                          <span className={styles.propFieldValue}>{propertyData.parking || <em>—</em>}</span>
-                        </div>
-                        <div className={styles.propField}>
-                          <span className={styles.propFieldLabel}>Move-in Date</span>
-                          <span className={styles.propFieldValue}>{propertyData.moveInDate || <em>—</em>}</span>
-                        </div>
+                        {propertyFields(propertyData).map(([label, value]) => (
+                          <div key={label} className={styles.propField}>
+                            <span className={styles.propFieldLabel}>{label}</span>
+                            <span className={styles.propFieldValue}>{value || <em>—</em>}</span>
+                          </div>
+                        ))}
                       </div>
                       {propertyData.description && (
                         <p className={styles.propDesc}>{propertyData.description}</p>
@@ -515,8 +483,8 @@ export default function PipelineTestPage() {
                           ))}
                         </div>
                       )}
-                      <a className={styles.viewLink} href={`/property/${propertyData.slug}`} target="_blank" rel="noopener noreferrer">
-                        /property/{propertyData.slug}
+                      <a className={styles.viewLink} href={`/p/${propertyData.slug}`} target="_blank" rel="noopener noreferrer">
+                        /p/{propertyData.slug}
                       </a>
                     </div>
                   )}
@@ -538,6 +506,26 @@ export default function PipelineTestPage() {
       </div>
     </div>
   )
+}
+
+const inr = (n: number | null) => (n != null ? `₹${Number(n).toLocaleString('en-IN')}` : '')
+const sqft = (n: number | null) => (n != null ? `${n} sq ft` : '')
+
+function propertyFields(p: {
+  price: number | null; deposit: number | null; location: string | null; locality: string | null
+  bedrooms: number | null; bathrooms: number | null; balconies: number | null
+  builtUpArea: number | null; carpetArea: number | null; furnishing: string | null
+  floor: string | null; totalFloors: number | null; parking: string | null; moveInDate: string | null
+}): [string, string | number | null][] {
+  return [
+    ['Price', inr(p.price)], ['Deposit', inr(p.deposit)],
+    ['Location', p.location], ['Locality', p.locality],
+    ['Bedrooms', p.bedrooms], ['Bathrooms', p.bathrooms], ['Balconies', p.balconies],
+    ['Built-up area', sqft(p.builtUpArea)], ['Carpet area', sqft(p.carpetArea)],
+    ['Furnishing', p.furnishing],
+    ['Floor', p.floor ? `${p.floor}${p.totalFloors != null ? ` of ${p.totalFloors}` : ''}` : ''],
+    ['Parking', p.parking], ['Move-in date', p.moveInDate],
+  ]
 }
 
 // ── Classified Gallery ────────────────────────────────────────────────────────

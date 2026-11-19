@@ -1,149 +1,37 @@
-/* Shared styles for Login and Register pages */
+.formHeader { margin-bottom: 28px; }
+.title { font-size: var(--text-xl); font-weight: 600; letter-spacing: -0.02em; color: var(--color-fg); }
+.subtitle { margin-top: 4px; font-size: var(--text-base); color: var(--color-fg2); }
 
-.formHeader {
-  margin-bottom: 28px;
-}
+.form { display: flex; flex-direction: column; gap: 20px; }
+.fields { display: flex; flex-direction: column; gap: 14px; }
 
-.title {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--color-fg);
-  letter-spacing: -0.4px;
-  margin-bottom: 6px;
-}
-
-.subtitle {
-  font-size: 14px;
-  color: var(--color-fg2);
-  margin: 0;
-}
-
-/* Form */
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.fields {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* Form-level error */
 .formError {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
-  background: color-mix(in srgb, var(--color-red) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-red) 30%, transparent);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
+  gap: 10px;
+  padding: 11px 14px;
+  font-size: var(--text-base);
   color: var(--color-red);
-  line-height: 1.5;
-}
-
-/* Switch link (login ↔ register) */
-.switchLink {
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--color-fg2);
-  text-align: center;
-}
-
-.switchLink a {
-  color: var(--color-accent);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.switchLink a:hover {
-  text-decoration: underline;
-}
-
-/* Admin note at the bottom of login */
-.adminNote {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  margin-top: 28px;
-  padding: 12px 14px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  color: var(--color-fg3);
-  line-height: 1.5;
-}
-
-/* Success state (register confirmation) */
-.successCard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 12px;
-  padding: 32px 24px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--color-red-soft);
+  border: 1px solid var(--color-red-line);
   border-radius: var(--radius-md);
 }
 
-.successIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-green) 12%, transparent);
+.adminNote {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-green);
-}
-
-.successTitle {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-fg);
-  margin: 0;
-}
-
-.successText {
-  font-size: 14px;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  line-height: 1.55;
   color: var(--color-fg2);
-  line-height: 1.6;
-  max-width: 30ch;
-  margin: 0;
 }
 
-/* Password strength meter */
-.strengthMeter {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+.switchLink { color: var(--color-accent); font-weight: 600; text-decoration: none; }
+.switchLink:hover { text-decoration: underline; }
 
-.strengthBars {
-  display: flex;
-  gap: 4px;
-}
-
-.strengthBar {
-  flex: 1;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--color-border);
-  transition: background 0.2s;
-}
-
-.strengthBar.active[data-level='1'] { background: var(--color-red); }
-.strengthBar.active[data-level='2'] { background: var(--color-amber); }
-.strengthBar.active[data-level='3'] { background: var(--color-green); }
-
-.strengthLabel {
-  font-size: 11px;
-  color: var(--color-fg3);
-}
+.successCard { text-align: center; }
+.successIcon { color: var(--color-green); }
+.successTitle { font-size: var(--text-lg); font-weight: 600; }
+.successText { font-size: var(--text-base); color: var(--color-fg2); }
+.strengthMeter, .strengthBars, .strengthBar, .strengthLabel { display: none; }

@@ -1,15 +1,22 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { BrokerRoute, GuestRoute } from '@/modules/auth/guards'
+import { AppShell } from '@/shared/components/AppShell/AppShell'
+import { brokerPages } from './brokerPages'
 
 import { lazy, Suspense } from 'react'
 
 const LoginPage        = lazy(() => import('@/modules/auth/pages/LoginPage'))
-const DashboardPage    = lazy(() => import('@/modules/dashboard/pages/DashboardPage'))
-const PropertiesPage   = lazy(() => import('@/modules/properties/pages/PropertiesPage'))
-const PropertyPage     = lazy(() => import('@/modules/properties/pages/PropertyPage'))
-const NewPropertyPage  = lazy(() => import('@/modules/properties/pages/NewPropertyPage'))
 const PropertySitePage = lazy(() => import('@/modules/property-site/PropertySitePage'))
 const PipelineTestPage = lazy(() => import('@/modules/test-pipeline/pages/PipelineTestPage'))
+const DashboardPage    = lazy(brokerPages.dashboard)
+const PropertiesPage   = lazy(brokerPages.properties)
+const PropertyPage     = lazy(brokerPages.property)
+const NewPropertyPage  = lazy(brokerPages.newProperty)
+const EnquiriesPage    = lazy(brokerPages.enquiries)
+const PerformancePage  = lazy(brokerPages.performance)
+const SettingsPage     = lazy(brokerPages.settings)
+const ProfilePage      = lazy(brokerPages.profile)
+const HelpPage         = lazy(brokerPages.help)
 
 function Loader() {
   return (
@@ -29,6 +36,10 @@ export const router = createBrowserRouter([
     path: '/p/:slug',
     element: withSuspense(<PropertySitePage />),
   },
+  {
+    path: '/:order_id',
+    element: withSuspense(<PropertySitePage />),
+  },
 
   // Guest only
   {
@@ -36,22 +47,20 @@ export const router = createBrowserRouter([
     element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
   },
 
-  // Broker workspace
+  // Broker workspace: the shell stays mounted and only the page inside it changes
   {
-    path: '/dashboard',
-    element: <BrokerRoute>{withSuspense(<DashboardPage />)}</BrokerRoute>,
-  },
-  {
-    path: '/properties',
-    element: <BrokerRoute>{withSuspense(<PropertiesPage />)}</BrokerRoute>,
-  },
-  {
-    path: '/properties/new',
-    element: <BrokerRoute>{withSuspense(<NewPropertyPage />)}</BrokerRoute>,
-  },
-  {
-    path: '/properties/:id',
-    element: <BrokerRoute>{withSuspense(<PropertyPage />)}</BrokerRoute>,
+    element: <BrokerRoute><AppShell /></BrokerRoute>,
+    children: [
+      { path: '/dashboard',      element: <DashboardPage /> },
+      { path: '/properties',     element: <PropertiesPage /> },
+      { path: '/properties/new', element: <NewPropertyPage /> },
+      { path: '/properties/:id', element: <PropertyPage /> },
+      { path: '/enquiries',      element: <EnquiriesPage /> },
+      { path: '/performance',    element: <PerformancePage /> },
+      { path: '/profile',        element: <ProfilePage /> },
+      { path: '/settings',       element: <SettingsPage /> },
+      { path: '/help',           element: <HelpPage /> },
+    ],
   },
 
   // Dev / testing

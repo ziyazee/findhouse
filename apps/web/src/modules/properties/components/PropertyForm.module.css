@@ -1,161 +1,181 @@
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+.form { display: flex; flex-direction: column; gap: 16px; }
+
+.columns { display: flex; flex-direction: column; gap: 16px; }
+.column { display: contents; }
+
+/* Single column order: what a broker knows first comes first */
+.basics { order: 1; }
+.location { order: 2; }
+.rooms { order: 3; }
+.amenitiesSection { order: 4; }
+.description { order: 5; }
 
 .section {
-  padding: 24px 0;
-  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  background: var(--color-bg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
 }
 
-.section:last-of-type {
-  border-bottom: none;
-}
-
-.sectionTitle {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-fg3);
-  margin-bottom: 16px;
-}
-
-.grid2 {
+.sectionHead { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sectionIcon {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+.tint_mint     { background: var(--tint-mint); color: var(--tint-mint-fg); }
+.tint_green    { background: var(--tint-green); color: var(--tint-green-fg); }
+.tint_lavender { background: var(--tint-lavender); color: var(--tint-lavender-fg); }
+.tint_peach    { background: var(--tint-peach); color: var(--tint-peach-fg); }
+.sectionTitle { flex: 1; min-width: 0; font-size: var(--text-md); font-weight: 700; color: var(--color-fg); letter-spacing: -0.01em; }
+.sectionMeta { flex-shrink: 0; font-size: var(--text-sm); color: var(--color-fg3); }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; }
+.rooms { container-type: inline-size; }
+
+/* Bedroom and bathroom chips need a full row in narrow cards */
+@container (max-width: 530px) {
+  .grid2 > .field { grid-column: 1 / -1; }
 }
 
-.grid3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 14px;
-}
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { font-size: var(--text-sm); font-weight: 600; color: var(--color-fg); }
 
-.span2 {
-  grid-column: span 2;
-}
-
-.label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-fg2);
-  margin-bottom: 6px;
-}
-
-.select {
-  display: block;
+.textarea {
   width: 100%;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.55;
   color: var(--color-fg);
-  font-size: 14px;
-  padding: 9px 12px;
-  cursor: pointer;
+  resize: vertical;
   outline: none;
-  transition: border-color 0.15s;
 }
+.textarea::placeholder { color: var(--color-fg3); }
 
-.select:focus {
+/* Soft filled fields, including the shared Input inside the form */
+.form :is(input, textarea) {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background-color: var(--color-field);
+  box-shadow: none;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.form input { height: 44px; }
+.form :is(input, textarea):hover { border-color: var(--color-border-strong); }
+.form :is(input, textarea):focus {
   border-color: var(--color-accent);
+  background-color: var(--color-bg);
+  box-shadow: 0 0 0 3px var(--color-ring);
 }
 
 .toggle {
-  display: flex;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  height: 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  height: 46px;
+  padding: 4px;
+  background: var(--color-field);
+  border-radius: 14px;
 }
-
 .toggleBtn {
-  flex: 1;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-fg2);
   background: none;
   border: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-fg2);
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  border-radius: 10px;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
-
-.toggleActive {
+.toggleBtn:hover { color: var(--color-fg); }
+.toggleActive, .toggleActive:hover {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
+  font-weight: 600;
+  box-shadow: 0 6px 14px -8px rgba(var(--brand-rgb), 0.6);
 }
 
-.amenities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: 20px;
-  padding: 5px 12px;
-  font-size: 12px;
+  height: 38px;
+  padding: 0 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-fg2);
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  background: var(--color-field);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
-
-.chip:hover {
+.chip:hover { border-color: var(--color-border-strong); color: var(--color-fg); }
+.chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.chipSquare { min-width: 38px; padding: 0 10px; border-radius: 12px; font-variant-numeric: tabular-nums; }
+.chipActive, .chipActive:hover {
+  background: var(--color-accent);
   border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.chipActive {
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.textarea {
-  display: block;
-  width: 100%;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-fg);
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  padding: 10px 12px;
-  resize: vertical;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.textarea:focus {
-  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
 }
 
 .error {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--color-red);
+  background: var(--color-red-soft);
+  border: 1px solid var(--color-red-line);
+  border-radius: 14px;
   padding: 10px 14px;
-  background: color-mix(in srgb, var(--color-red) 8%, transparent);
-  border-radius: var(--radius-sm);
-  border: 1px solid color-mix(in srgb, var(--color-red) 20%, transparent);
 }
 
 .actions {
-  padding-top: 24px;
+  position: sticky;
+  bottom: 20px;
+  z-index: 5;
+  align-self: flex-end;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card-hover);
+}
+.actions > * { height: 46px; padding: 0 22px; border-radius: 14px; }
+
+/* Wide screens: two independent columns of cards */
+@media (min-width: 1100px) {
+  .columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .column { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+}
+
+@media (max-width: 760px) {
+  .form, .columns { gap: 14px; }
+  .section { padding: 18px 16px; gap: 14px; border-radius: 22px; }
+  .form input { height: 48px; }
+  .toggle { height: 48px; }
+  .textarea { font-size: 16px; }
+  .chip { height: 40px; }
+  .chipSquare { min-width: 40px; }
+  .actions > * { height: 52px; border-radius: 16px; font-size: var(--text-md); }
 }
 
 @media (max-width: 600px) {
-  .grid2, .grid3 { grid-template-columns: 1fr; }
-  .span2 { grid-column: span 1; }
+  .form { gap: 12px; }
+  .grid2 { gap: 14px 12px; }
+
+  .actions {
+    align-self: stretch;
+    bottom: 0;
+    margin: 0 -16px calc(-32px - env(safe-area-inset-bottom));
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -10px 28px -18px rgba(var(--shade-rgb), 0.35);
+  }
+  .actions > * { flex: 1; }
 }

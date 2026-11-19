@@ -69,6 +69,9 @@ export default function LoginPage() {
           <Input
             label="Phone number"
             type="tel"
+            name="phone"
+            inputMode="numeric"
+            spellCheck={false}
             placeholder="9876543210"
             value={phone}
             onChange={(e) => {
@@ -92,7 +95,7 @@ export default function LoginPage() {
       <div className={styles.adminNote}>
         <WhatsAppIcon />
         <span>
-          Don't have an account? Send a message to our WhatsApp number to get started. Your broker account is created automatically.
+          New here? Send a message to our WhatsApp number and your account is created automatically.
         </span>
       </div>
     </AuthLayout>

@@ -7,6 +7,8 @@ export interface IPropertyService {
   getProperties(brokerId: string): Promise<Property[]>
   getProperty(id: string): Promise<Property | null>
   getPropertyBySlug(slug: string): Promise<Property | null>
+  /** Phone number guests can call or WhatsApp; null unless the listing is live and its broker is active. */
+  getListingContact(id: string): Promise<string | null>
   createProperty(brokerId: string, data: CreatePropertyInput): Promise<Property>
   updateProperty(id: string, data: UpdatePropertyInput): Promise<Property>
   deleteProperty(id: string): Promise<void>
@@ -49,6 +51,12 @@ class SupabasePropertyService implements IPropertyService {
     if (error) return null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return toProperty(data as any)
+  }
+
+  async getListingContact(id: string): Promise<string | null> {
+    const { data, error } = await supabase.rpc('get_listing_contact', { listing_id: id })
+    if (error) return null
+    return data || null
   }
 
   async createProperty(brokerId: string, input: CreatePropertyInput): Promise<Property> {
@@ -129,9 +137,10 @@ function toMedia(row: Record<string, any>) {
   }
 }
 
-function toRow(input: Partial<CreatePropertyInput>) {
+function toRow(input: UpdatePropertyInput) {
   return {
     title: input.title,
+    status: input.status,
     property_type: input.propertyType,
     listing_type: input.listingType,
     price: input.price,

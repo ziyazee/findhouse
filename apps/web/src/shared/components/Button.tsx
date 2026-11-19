@@ -14,6 +14,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   as?: ElementType
   to?: string
   href?: string
+  target?: string
+  rel?: string
 }
 
 export function Button({

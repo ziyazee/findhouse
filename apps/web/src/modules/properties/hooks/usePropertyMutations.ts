@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createPropertyService } from '../PropertyService'
 import { useAuth } from '@/modules/auth/useAuth'
-import type { CreatePropertyInput, UpdatePropertyInput } from '../property.types'
+import type { CreatePropertyInput, PropertyStatus, UpdatePropertyInput } from '../property.types'
 import { PROPERTIES_KEY } from './useProperties'
 import { PROPERTY_KEY } from './useProperty'
 
@@ -28,6 +28,19 @@ export function useUpdateProperty(id: string) {
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: [PROPERTIES_KEY] })
       qc.setQueryData([PROPERTY_KEY, id], updated)
+    },
+  })
+}
+
+export function useSetPropertyStatus() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: PropertyStatus }) =>
+      svc.updateProperty(id, { status }),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: [PROPERTIES_KEY] })
+      qc.setQueryData([PROPERTY_KEY, updated.id], updated)
     },
   })
 }

@@ -1,36 +1,28 @@
-import { useNavigate, Link } from 'react-router-dom'
-import { AppShell } from '@/shared/components/AppShell/AppShell'
+import { useNavigate } from 'react-router-dom'
+import { PageHero } from '@/shared/components/PageHero/PageHero'
+import { toast } from '@/shared/components/toastStore'
 import { PropertyForm } from '../components/PropertyForm'
 import { useCreateProperty } from '../hooks/usePropertyMutations'
-import type { CreatePropertyInput } from '../property.types'
+import type { CreatePropertyInput, UpdatePropertyInput } from '../property.types'
 import styles from './NewPropertyPage.module.css'
 
 export default function NewPropertyPage() {
   const navigate = useNavigate()
   const { mutateAsync, isPending } = useCreateProperty()
 
-  async function handleSubmit(data: CreatePropertyInput | import('../property.types').UpdatePropertyInput) {
+  async function handleSubmit(data: CreatePropertyInput | UpdatePropertyInput) {
     const property = await mutateAsync(data as CreatePropertyInput)
+    toast.success('Property created. Add photos to make it active.')
     navigate(`/properties/${property.id}`)
   }
 
   return (
-    <AppShell>
-      <div className={styles.root}>
-        <header className={styles.header}>
-          <Link to="/properties" className={styles.back}>← Properties</Link>
-          <h1 className={styles.title}>New Property</h1>
-          <p className={styles.sub}>Fill in the details to create a listing manually.</p>
-        </header>
+    <>
+      <PageHero title="Add property" subtitle="Fill in the details. Photos come next." />
 
-        <div className={styles.formWrap}>
-          <PropertyForm
-            onSubmit={handleSubmit}
-            submitLabel="Create Property"
-            isLoading={isPending}
-          />
-        </div>
+      <div className={styles.formWrap}>
+        <PropertyForm onSubmit={handleSubmit} submitLabel="Create property" isLoading={isPending} />
       </div>
-    </AppShell>
+    </>
   )
 }

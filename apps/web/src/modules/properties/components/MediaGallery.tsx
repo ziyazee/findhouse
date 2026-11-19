@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getMediaUrl } from '@/lib/storage'
+import { ImagePlus, Star, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
+import { toast } from '@/shared/components/toastStore'
 import type { PropertyMedia } from '../property.types'
 import styles from './MediaGallery.module.css'
 
@@ -17,6 +20,8 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
   const fileInput = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [toDelete, setToDelete] = useState<PropertyMedia | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const sorted = [...media].sort((a, b) => a.displayOrder - b.displayOrder)
 
@@ -53,45 +58,59 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
 
     setUploading(false)
     onUpdate()
+    if (fileInput.current) fileInput.current.value = ''
   }
 
   async function handleSetCover(mediaId: string) {
     await supabase.from('property_media').update({ is_cover: false }).eq('property_id', propertyId)
     await supabase.from('property_media').update({ is_cover: true }).eq('id', mediaId)
     onUpdate()
+    toast.success('Cover photo updated')
   }
 
   async function handleDelete(item: PropertyMedia) {
+    setDeleting(true)
     await fetch(`${UPLOAD_API}?key=${encodeURIComponent(item.storagePath)}`, { method: 'DELETE' })
-    await supabase.from('property_media').delete().eq('id', item.id)
+    const { error: dbError } = await supabase.from('property_media').delete().eq('id', item.id)
+    setDeleting(false)
+    setToDelete(null)
     onUpdate()
+    if (dbError) toast.error(dbError.message)
+    else toast.success(item.mediaType === 'video' ? 'Video removed' : 'Photo removed')
   }
 
   return (
     <div className={styles.root}>
       {/* Upload zone */}
-      <div
-        className={styles.uploadZone}
-        onClick={() => fileInput.current?.click()}
+      <label
+        className={`${styles.uploadZone} ${uploading ? styles.uploading : ''}`}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); handleUpload(e.dataTransfer.files) }}
       >
-        <UploadIcon />
-        <p className={styles.uploadText}>
-          {uploading ? 'Uploading…' : 'Drop photos/videos here, or click to browse'}
-        </p>
-        <p className={styles.uploadHint}>JPG, PNG, MP4 · max 50MB each</p>
+        <span className={styles.uploadIcon} aria-hidden="true">
+          {uploading ? <span className="spinner" /> : <Upload size={20} />}
+        </span>
+        <span className={styles.uploadText}>
+          {uploading ? 'Uploading…' : (
+            <>
+              <span className={styles.desktopText}><strong>Click to upload</strong> or drag photos and videos here</span>
+              <span className={styles.phoneText}><strong>Tap to add photos or videos</strong></span>
+            </>
+          )}
+        </span>
+        <span className={styles.uploadHint}>JPG, PNG or MP4, up to 50 MB each</span>
         <input
           ref={fileInput}
           type="file"
           accept="image/*,video/*"
           multiple
-          hidden
+          className="sr-only"
+          disabled={uploading}
           onChange={(e) => handleUpload(e.target.files)}
         />
-      </div>
+      </label>
 
-      {error && <p className={styles.error}>{error}</p>}
+      {error && <p className={styles.error} role="alert">{error}</p>}
 
       {/* Grid */}
       {sorted.length > 0 && (
@@ -108,17 +127,22 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
                   <img src={url} alt="" className={styles.thumb} loading="lazy" />
                 )}
 
-                {item.isCover && <span className={styles.coverBadge}>Cover</span>}
+                {item.isCover && <span className={styles.coverBadge}><Star size={12} aria-hidden="true" />Cover</span>}
 
                 <div className={styles.actions}>
-                  {!item.isCover && (
+                  {!item.isCover && !isVideo ? (
                     <Button size="sm" variant="secondary" onClick={() => handleSetCover(item.id)}>
-                      Set cover
+                      Set as cover
                     </Button>
-                  )}
-                  <Button size="sm" variant="danger" onClick={() => handleDelete(item)}>
-                    <TrashIcon />
-                  </Button>
+                  ) : <span />}
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    aria-label={isVideo ? 'Delete video' : 'Delete photo'}
+                    onClick={() => setToDelete(item)}
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             )
@@ -127,27 +151,22 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
       )}
 
       {sorted.length === 0 && !uploading && (
-        <p className={styles.empty}>No media yet.</p>
+        <p className={styles.empty}>
+          <ImagePlus size={16} aria-hidden="true" />
+          No photos yet. Properties with photos get far more enquiries.
+        </p>
       )}
+
+      <ConfirmDialog
+        open={!!toDelete}
+        tone="danger"
+        title={toDelete?.mediaType === 'video' ? 'Delete this video?' : 'Delete this photo?'}
+        description="It will be removed from the property and its public page."
+        confirmLabel="Delete"
+        loading={deleting}
+        onConfirm={() => toDelete && handleDelete(toDelete)}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
-  )
-}
-
-function UploadIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" x2="12" y1="3" y2="15" />
-    </svg>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
   )
 }

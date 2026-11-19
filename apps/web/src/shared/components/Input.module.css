@@ -1,60 +1,41 @@
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+.field { display: flex; flex-direction: column; gap: 6px; }
 
-.label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-fg);
-  letter-spacing: -0.01em;
-}
+.label { font-size: var(--text-sm); font-weight: 600; color: var(--color-fg); }
 
-.inputWrap {
-  position: relative;
-}
+.inputWrap { position: relative; }
 
 .input {
   width: 100%;
-  height: 42px;
-  padding: 0 12px;
-  font-size: 14px;
-  font-family: 'Inter', system-ui, sans-serif;
+  height: 46px;
+  padding: 0 14px;
+  font-size: var(--text-base);
+  font-family: var(--font-sans);
   color: var(--color-fg);
-  background: var(--color-bg);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  background: var(--color-field);
+  border: 1px solid transparent;
+  border-radius: 12px;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
   appearance: none;
   -webkit-appearance: none;
 }
 
-.input::placeholder {
-  color: var(--color-fg3);
-}
+.input::placeholder { color: var(--color-fg3); }
 
+.input:hover { border-color: var(--color-border-strong); }
 .input:focus {
+  background: var(--color-bg);
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+  box-shadow: 0 0 0 3px var(--color-ring);
 }
 
-/* Password field — leave room for eye button */
-input[type='password'].input,
-input[type='text'].input:has(~ .eyeBtn) {
-  padding-right: 42px;
-}
-
-.inputWrap:has(.eyeBtn) .input {
-  padding-right: 42px;
-}
+.inputWrap:has(.eyeBtn) .input { padding-right: 42px; }
 
 .eyeBtn {
   position: absolute;
   right: 0;
   top: 0;
-  height: 42px;
+  height: 46px;
   width: 42px;
   display: flex;
   align-items: center;
@@ -63,30 +44,16 @@ input[type='text'].input:has(~ .eyeBtn) {
   border: none;
   cursor: pointer;
   color: var(--color-fg3);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  transition: color 0.12s;
 }
-
 .eyeBtn:hover { color: var(--color-fg2); }
 
-/* Error state */
-.hasError .input {
-  border-color: var(--color-red);
-}
+.hasError .input { border-color: var(--color-red); }
+.hasError .input:focus { border-color: var(--color-red); box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.15); }
 
-.hasError .input:focus {
-  border-color: var(--color-red);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-red) 15%, transparent);
-}
+.error { font-size: var(--text-sm); color: var(--color-red); margin: 0; }
+.hint { font-size: var(--text-sm); color: var(--color-fg3); margin: 0; }
 
-.error {
-  font-size: 12px;
-  color: var(--color-red);
-  margin: 0;
-}
-
-.hint {
-  font-size: 12px;
-  color: var(--color-fg3);
-  margin: 0;
+@media (max-width: 600px) {
+  .input { font-size: 16px; height: 48px; }
+  .eyeBtn { height: 48px; }
 }

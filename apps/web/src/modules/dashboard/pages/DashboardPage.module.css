@@ -1,88 +1,205 @@
-.root {
-  padding: 28px 32px;
-  max-width: 1100px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.heroName { color: #f4d9a6; }
 
-/* Welcome */
-.welcome {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
 
-.title {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--color-fg);
-}
-
-.sub {
-  font-size: 13px;
-  color: var(--color-fg3);
-  margin-top: 3px;
-}
-
-/* Stats */
-.statsLoading {
-  display: flex;
-  justify-content: center;
-  padding: 24px;
-}
-
+/* ── Stats ───────────────────────────────────────────────────────────────── */
 .stats {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-/* Activity */
-.activity {}
+.statItem, .recentItem { display: grid; min-width: 0; }
 
-/* Quick links */
-.quickTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-fg3);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 12px;
-}
-
-.quickGrid {
+.stat {
+  position: relative;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px;
-}
-
-.quickCard {
-  display: flex;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "label icon" "value value" "sub sub";
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-fg);
+  row-gap: 6px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-card);
   text-decoration: none;
-  transition: background 0.12s, border-color 0.12s;
+  color: inherit;
+  transition: box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.stat:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+.stat > * { position: relative; z-index: 1; }
+
+.statLabel {
+  grid-area: label;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-fg);
 }
 
-.quickCard:hover {
-  background: var(--color-surface);
-  border-color: var(--color-accent);
+.statIcon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+}
+.statIconWarn { color: var(--color-amber); }
+
+.statValue {
+  grid-area: value;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.statSub { grid-area: sub; font-size: var(--text-sm); color: var(--color-fg2); }
+.statSubWarn { color: #c2410c; font-weight: 500; }
+
+.trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--color-green);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tint_mint     { background: linear-gradient(140deg, rgba(241, 249, 245, 0.94), rgba(221, 240, 231, 0.94)); }
+.tint_green    { background: linear-gradient(140deg, rgba(244, 250, 241, 0.94), rgba(228, 243, 225, 0.94)); }
+.tint_lavender { background: linear-gradient(140deg, var(--tint-lavender-glass-a), var(--tint-lavender-glass-b)); }
+.tint_peach    { background: linear-gradient(140deg, rgba(254, 247, 240, 0.94), rgba(252, 234, 220, 0.94)); }
+
+.tint_mint .statIcon     { color: var(--tint-mint-fg); }
+.tint_green .statIcon    { color: var(--tint-green-fg); }
+.tint_lavender .statIcon { color: var(--tint-lavender-fg); }
+.tint_peach .statIcon    { color: var(--tint-peach-fg); }
+
+.tint_mint::after {
+  content: '';
+  position: absolute;
+  right: -18px;
+  bottom: -22px;
+  width: 104px;
+  height: 104px;
+  background: url('../../../assets/card-house.jpg') center / cover;
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent);
+  mask-image: radial-gradient(closest-side, #000 55%, transparent);
+  pointer-events: none;
+}
+
+.labelShort { display: none; }
+
+/* ── Recently added ──────────────────────────────────────────────────────── */
+.headerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--color-accent);
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+}
+.headerLink:hover { color: var(--color-accent-hover); text-decoration: underline; text-underline-offset: 3px; }
+
+.recentCard > header { border-bottom: 0; padding-bottom: 0; }
+.recentCard h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+
+.recentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  padding: 18px 22px 22px;
 }
 
-@media (max-width: 600px) {
-  .root { padding: 16px; }
-  .stats { grid-template-columns: 1fr 1fr; }
-  .quickGrid { grid-template-columns: 1fr; }
+@media (min-width: 761px) {
+  /* Stat cards sit over the bottom of the banner */
+  .stats { margin: -72px 24px 28px; }
+}
+
+@media (max-width: 1100px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recentGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── Phone overview ──────────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .greeting { font-size: 24px; }
+
+  .stats { margin-top: -60px; margin-bottom: 16px; gap: 12px; }
+
+  .stat {
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-areas: "icon label" "icon value" "icon sub";
+    align-items: start;
+    column-gap: 10px;
+    row-gap: 2px;
+    min-height: 112px;
+    padding: 14px 10px 14px 12px;
+    border-radius: 18px;
+  }
+  .stat:hover { box-shadow: var(--shadow-card); transform: none; }
+
+  .statIcon { grid-row: 1 / span 3; width: 36px; height: 36px; }
+
+  .statLabel {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .statValue { font-size: 28px; }
+  .statSub { font-size: var(--text-xs); line-height: 1.35; }
+  .trend { margin-top: 4px; padding: 1px 7px; }
+
+  .tint_mint::after { right: -22px; top: 18px; bottom: auto; width: 88px; height: 88px; }
+
+  .headerLink { min-height: 44px; padding: 0 4px; margin-right: -4px; }
+
+  /* Swipeable row. No clipping ancestors, size containment or mandatory snap:
+     each can leave iOS Safari unable to pan the row after the page scrolls. */
+  .recentGrid {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scroll-padding: 0 16px;
+    scrollbar-width: none;
+    border-radius: 0 0 24px 24px;
+  }
+  .recentGrid::-webkit-scrollbar { display: none; }
+  .recentGrid > * { flex: 0 0 min(82%, 320px); scroll-snap-align: start; }
+}
+
+@media (max-width: 380px) {
+  .stat {
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-areas: "icon label" "value value" "sub sub";
+    align-items: center;
+    row-gap: 6px;
+  }
+  .statIcon { grid-row: auto; }
+  .labelLong { display: none; }
+  .labelShort { display: inline; }
 }

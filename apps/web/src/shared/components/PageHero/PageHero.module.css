@@ -1,0 +1,224 @@
+.hero {
+  --hero-image: url('../../../assets/hero-building-navy.jpg');
+  position: relative;
+  display: block;
+  color: #fff;
+}
+:global([data-theme='green']) .hero { --hero-image: url('../../../assets/hero-building.jpg'); }
+:global([data-theme='burgundy']) .hero { --hero-image: url('../../../assets/hero-building-burgundy.jpg'); }
+:global([data-theme='charcoal']) .hero { --hero-image: url('../../../assets/hero-building-charcoal.jpg'); }
+:global([data-theme='aubergine']) .hero { --hero-image: url('../../../assets/hero-building-aubergine.jpg'); }
+:global([data-theme='peacock']) .hero { --hero-image: url('../../../assets/hero-building-peacock.jpg'); }
+:global([data-theme='espresso']) .hero { --hero-image: url('../../../assets/hero-building-espresso.jpg'); }
+:global([data-theme='cognac']) .hero { --hero-image: url('../../../assets/hero-building-cognac.jpg'); }
+:global([data-theme='olive']) .hero { --hero-image: url('../../../assets/hero-building-olive.jpg'); }
+:global([data-theme='indigo']) .hero { --hero-image: url('../../../assets/hero-building-indigo.jpg'); }
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 12px;
+}
+
+.mark {
+  display: block;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+}
+
+.actions { display: flex; align-items: center; gap: 8px; }
+
+.glassBtn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease);
+}
+.glassBtn:hover, .glassBtn[aria-expanded='true'] { background: rgba(255, 255, 255, 0.3); }
+.glassBtn:active { background: rgba(255, 255, 255, 0.3); }
+.glassBtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.title {
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+}
+
+.subtitle { margin-top: 4px; color: rgba(255, 255, 255, 0.9); }
+
+.searchRow { display: flex; gap: 10px; }
+
+.search, .squareBtn {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 24px -14px rgba(var(--shade-rgb), 0.45);
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  color: var(--color-fg3);
+}
+.search:focus-within { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.45); }
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  color: var(--color-fg);
+}
+.search input:focus { outline: none; }
+.search input::placeholder { color: var(--color-fg3); }
+
+.squareBtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--color-accent);
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease);
+}
+.squareBtn:hover { background: #fff; }
+.squareBtn[aria-expanded='true'] { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+
+/* Content placed right after the banner on pages without their own overlap */
+.body { position: relative; }
+
+/* ── Phones: full-bleed header that fades into the page ─────────────────── */
+@media (max-width: 760px) {
+  .hero {
+    margin: 0 -16px;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 76px;
+    background:
+      linear-gradient(0deg, var(--color-canvas) 0%, rgba(var(--canvas-rgb), 0.85) 16%, rgba(var(--canvas-rgb), 0) 42%),
+      linear-gradient(180deg, rgba(var(--shade-rgb), 0.35) 0%, rgba(var(--shade-rgb), 0) 60%),
+      var(--hero-image) 72% 0 / cover no-repeat,
+      var(--hero-fallback);
+  }
+
+  /* Property photos: darker top and bottom so white text and buttons stay legible */
+  .photo {
+    background:
+      linear-gradient(180deg, rgba(var(--photo-shade-rgb), 0.55) 0%, rgba(var(--photo-shade-rgb), 0) 38%, rgba(var(--photo-shade-rgb), 0) 62%, rgba(var(--photo-shade-rgb), 0.35) 100%),
+      var(--hero-image) center / cover no-repeat,
+      var(--hero-fallback);
+  }
+
+  .top { margin-bottom: 18px; }
+  .title { font-size: 26px; }
+  .subtitle { font-size: var(--text-base); }
+  .searchRow { margin-top: 18px; }
+  .search, .squareBtn { height: 52px; }
+  .search input { font-size: 16px; }
+  .squareBtn { width: 52px; }
+  .body { margin-top: -44px; }
+}
+
+/* ── Desktop and tablet: rounded banner inside the content column ───────── */
+@media (min-width: 761px) {
+  .hero {
+    min-height: 196px;
+    margin-bottom: 24px;
+    padding: 32px 36px 36px;
+    border-radius: 28px;
+    isolation: isolate;
+    background:
+      radial-gradient(70% 140% at 0% 0%, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0) 60%),
+      linear-gradient(90deg,
+        rgb(var(--brand-rgb)) 0%,
+        rgba(var(--brand-rgb), 0.98) 30%,
+        rgba(var(--brand-rgb), 0.9) 42%,
+        rgba(var(--brand-rgb), 0.66) 54%,
+        rgba(var(--brand-rgb), 0.36) 65%,
+        rgba(var(--brand-rgb), 0.12) 76%,
+        rgba(var(--brand-rgb), 0) 88%),
+      linear-gradient(0deg, rgba(var(--hero-shade-rgb), 0.45) 0%, rgba(var(--hero-shade-rgb), 0) 50%),
+      var(--hero-image) right 35% / cover no-repeat,
+      var(--hero-fallback-deep);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 24px 48px -32px rgba(var(--shade-rgb), 0.6);
+  }
+  /* Fine film grain keeps the long gradient from banding */
+  .hero:not(.photo)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .overlap { padding-bottom: 92px; }
+
+  .photo {
+    min-height: 380px;
+    background:
+      linear-gradient(180deg, rgba(var(--photo-shade-rgb), 0.5) 0%, rgba(var(--photo-shade-rgb), 0) 30%, rgba(var(--photo-shade-rgb), 0) 60%, rgba(var(--photo-shade-rgb), 0.35) 100%),
+      var(--hero-image) center / cover no-repeat,
+      var(--hero-fallback);
+  }
+
+  /* The sidebar carries the brand; without a back button the actions float top-right */
+  .brand { display: none; }
+  .top { position: absolute; top: 28px; right: 32px; }
+  .withBack .top { position: static; margin-bottom: 20px; }
+  .withBack .actions { margin-left: auto; }
+
+  .title { max-width: 680px; font-size: 34px; letter-spacing: -0.025em; }
+  .subtitle { max-width: 560px; margin-top: 6px; font-size: 15px; }
+  .hero:not(.withBack) .title { padding-right: 120px; }
+
+  .searchRow { max-width: 600px; margin-top: 24px; }
+  .search, .squareBtn { height: 52px; }
+  .search input { font-size: 15px; }
+  .squareBtn { width: 52px; }
+  .phoneOnly { display: none; }
+}
+
+/* Wide screens: the search sits top-right, beside the title */
+@media (min-width: 1100px) {
+  .hero:not(.withBack) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+    column-gap: 32px;
+    align-content: start;
+  }
+  .hero:not(.withBack) > * { grid-column: 1 / -1; }
+  .hero:not(.withBack) > .title, .hero:not(.withBack) > .subtitle { grid-column: 1; }
+  .hero:not(.withBack) > .searchRow { grid-column: 2; grid-row: 1 / span 2; align-self: start; margin-top: 0; }
+  .hero:has(> .searchRow) .title { padding-right: 0; }
+  .hero:not(.withBack) > .searchRow .search { height: 48px; }
+}

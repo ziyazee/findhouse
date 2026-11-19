@@ -1,42 +1,31 @@
 import styles from './Badge.module.css'
 
-type BadgeVariant = 'green' | 'red' | 'amber' | 'blue' | 'grey'
+export type BadgeVariant = 'green' | 'red' | 'amber' | 'blue' | 'grey' | 'tag'
 
 interface BadgeProps {
   children: React.ReactNode
   variant?: BadgeVariant
   size?: 'sm' | 'md'
+  dot?: boolean
+  title?: string
 }
 
-export function Badge({ children, variant = 'grey', size = 'md' }: BadgeProps) {
+export function Badge({ children, variant = 'grey', size = 'md', dot = false, title }: BadgeProps) {
   return (
     <span
       className={`${styles.badge} ${styles[variant]} ${size === 'sm' ? styles.sm : ''}`}
+      title={title}
     >
+      {dot && <span className={styles.dot} aria-hidden="true" />}
       {children}
     </span>
   )
 }
 
-// Preset helpers used across the dashboard
-export function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, BadgeVariant> = {
-    available: 'green',
-    sold: 'red',
-    rented: 'blue',
-  }
-  const labels: Record<string, string> = {
-    available: 'Available',
-    sold: 'Sold',
-    rented: 'Rented',
-  }
-  return <Badge variant={map[status] ?? 'grey'}>{labels[status] ?? status}</Badge>
-}
-
 export function ListingTypeBadge({ type }: { type: string }) {
   return (
-    <Badge variant={type === 'sale' ? 'amber' : 'blue'}>
-      {type === 'sale' ? 'For Sale' : 'For Rent'}
+    <Badge variant="tag">
+      {type === 'sale' ? 'For sale' : 'For rent'}
     </Badge>
   )
 }

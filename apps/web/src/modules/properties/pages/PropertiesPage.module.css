@@ -1,64 +1,54 @@
-.root {
-  padding: 28px 32px;
-  max-width: 1200px;
-}
-
-.header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-
-.title {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--color-fg);
-}
-
-.sub {
-  font-size: 13px;
-  color: var(--color-fg3);
-  margin-top: 2px;
-}
-
-.filters {
-  margin-bottom: 20px;
-}
-
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
-.center {
-  display: flex;
-  justify-content: center;
-  padding: 60px;
-}
+.gridItem { display: grid; min-width: 0; }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 72px 24px;
-  text-align: center;
+.resultCount {
+  margin: -8px 0 12px;
+  font-size: var(--text-sm);
   color: var(--color-fg3);
-  font-size: 14px;
 }
 
-.errorMsg {
-  color: var(--color-red);
-  font-size: 14px;
+.viewToggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--color-field);
 }
+
+.viewToggle button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--color-fg3);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.viewToggle button:hover { color: var(--color-fg); }
+.viewToggle button[aria-pressed='true'] { background: var(--color-bg); color: var(--color-accent); box-shadow: 0 2px 6px -2px rgba(var(--shade-rgb), 0.25); }
 
 @media (max-width: 600px) {
-  .root { padding: 16px; }
-  .grid { grid-template-columns: 1fr; }
+  .viewToggle button { width: 40px; height: 38px; }
+}
+
+.filterDot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f04438;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+@media (max-width: 760px) {
+  .grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
 }

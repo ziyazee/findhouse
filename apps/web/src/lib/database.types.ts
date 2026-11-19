@@ -295,7 +295,12 @@ export type Database = {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      get_listing_contact: {
+        Args: { listing_id: string }
+        Returns: string | null
+      }
+    }
     Enums: Record<string, never>
   }
 }
