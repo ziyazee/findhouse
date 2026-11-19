@@ -95,6 +95,66 @@ function mimeToExtension(mimeType: string): string {
   return map[mimeType] ?? 'bin'
 }
 
+// ── R2 client (inlined — bundles cannot import from _shared/) ─────────────────
+
+const _r2encoder = new TextEncoder()
+
+function _r2Config() {
+  return {
+    accountId: Deno.env.get('R2_ACCOUNT_ID')!,
+    accessKeyId: Deno.env.get('R2_ACCESS_KEY_ID')!,
+    secretAccessKey: Deno.env.get('R2_SECRET_ACCESS_KEY')!,
+    bucket: Deno.env.get('R2_BUCKET_NAME') ?? 'findhouse-media',
+    publicUrl: Deno.env.get('R2_PUBLIC_URL')!,
+  }
+}
+
+async function _hmacSha256(key: ArrayBuffer, data: string): Promise<ArrayBuffer> {
+  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  return crypto.subtle.sign('HMAC', k, _r2encoder.encode(data))
+}
+
+async function _sha256(data: Uint8Array): Promise<string> {
+  const h = await crypto.subtle.digest('SHA-256', data)
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function _toHex(buf: ArrayBuffer): string {
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function _signR2Request(
+  method: string, url: string, headers: Record<string, string>,
+  body: Uint8Array, accessKeyId: string, secretAccessKey: string,
+): Promise<Record<string, string>> {
+  const pu = new URL(url)
+  const now = new Date()
+  const dateStamp = now.toISOString().replace(/[-:]/g, '').slice(0, 8)
+  const amzDate = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
+  const region = 'auto', service = 's3'
+  const payloadHash = await _sha256(body)
+  const sh: Record<string, string> = { ...headers, host: pu.host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate }
+  const hkeys = Object.keys(sh).sort()
+  const canonicalRequest = [method, pu.pathname, pu.search.replace('?', ''), hkeys.map((k) => `${k}:${sh[k]}\n`).join(''), hkeys.join(';'), payloadHash].join('\n')
+  const credScope = `${dateStamp}/${region}/${service}/aws4_request`
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, credScope, await _sha256(_r2encoder.encode(canonicalRequest))].join('\n')
+  let sigKey = await _hmacSha256(_r2encoder.encode('AWS4' + secretAccessKey), dateStamp)
+  sigKey = await _hmacSha256(sigKey, region)
+  sigKey = await _hmacSha256(sigKey, service)
+  sigKey = await _hmacSha256(sigKey, 'aws4_request')
+  const sig = _toHex(await _hmacSha256(sigKey, stringToSign))
+  return { ...sh, authorization: `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credScope}, SignedHeaders=${hkeys.join(';')}, Signature=${sig}` }
+}
+
+async function uploadToR2(key: string, body: Uint8Array, contentType: string): Promise<{ success: boolean; error?: string }> {
+  const c = _r2Config()
+  const endpoint = `https://${c.accountId}.r2.cloudflarestorage.com/${c.bucket}/${key}`
+  const headers = await _signR2Request('PUT', endpoint, { 'content-type': contentType }, body, c.accessKeyId, c.secretAccessKey)
+  const res = await fetch(endpoint, { method: 'PUT', headers, body })
+  if (!res.ok) { const text = await res.text(); return { success: false, error: `R2 upload failed (${res.status}): ${text}` } }
+  return { success: true }
+}
+
 // ── Broker manager ────────────────────────────────────────────────────────────
 
 async function resolveBroker(db: SupabaseClient, phone: string): Promise<ResolvedBroker | null> {
@@ -226,8 +286,8 @@ async function handleMessage(msg: WAMessage, _phoneNumberId: string) {
       const { bytes, mimeType } = await downloadWAMedia(waMediaId)
       const ext = mimeToExtension(mimeType)
       const path = `submissions/${sessionId}/${msg.id}.${ext}`
-      const { error: uploadError } = await db.storage.from('property-media').upload(path, bytes, { contentType: mimeType, upsert: false })
-      if (uploadError) { console.warn(`[webhook] Media upload failed: ${uploadError.message}`) } else { storagePath = path }
+      const result = await uploadToR2(path, bytes, mimeType)
+      if (!result.success) { console.warn(`[webhook] Media upload failed: ${result.error}`) } else { storagePath = path }
     } catch (err) { console.warn(`[webhook] Media download failed: ${err}`) }
   }
 

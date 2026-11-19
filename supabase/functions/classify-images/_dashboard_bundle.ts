@@ -179,7 +179,7 @@ const db = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-const BUCKET              = 'property-media'
+const R2_PUBLIC_URL        = Deno.env.get('R2_PUBLIC_URL')!
 const DOWNLOAD_CONCURRENCY = parseInt(Deno.env.get('CLASSIFY_DOWNLOAD_CONCURRENCY') ?? '4')
 
 Deno.serve(async (req: Request) => {
@@ -238,9 +238,9 @@ Deno.serve(async (req: Request) => {
     const downloadResults = await runBounded(
       unclassified,
       async (row) => {
-        const { data: blob, error } = await db.storage.from(BUCKET).download(row.storage_path)
-        if (error || !blob) throw new Error(`Storage download failed for ${row.storage_path}: ${error?.message}`)
-        const uint8  = new Uint8Array(await blob.arrayBuffer())
+        const res = await fetch(`${R2_PUBLIC_URL}/${row.storage_path}`)
+        if (!res.ok) throw new Error(`R2 download failed for ${row.storage_path}: ${res.status}`)
+        const uint8  = new Uint8Array(await res.arrayBuffer())
         const base64 = btoa(uint8.reduce((acc, byte) => acc + String.fromCharCode(byte), ''))
         return { id: row.id, base64, mimeType: guessMimeType(row.storage_path) } satisfies ImageInput
       },
