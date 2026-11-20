@@ -1,56 +1,62 @@
-import type { Property, CreatePropertyInput, UpdatePropertyInput } from './property.types'
 import { supabase } from '@/lib/supabase'
-
-// ── Interface ─────────────────────────────────────────────────────────────────
+import type { CreatePropertyInput, Property, UpdatePropertyInput } from './property.types'
+import { PROPERTY_SELECT, generateSlug, toProperty, toPropertyRow, type PropertyWithMediaRow } from './propertyMappers'
 
 export interface IPropertyService {
   getProperties(brokerId: string): Promise<Property[]>
+  /** Null when no such property is visible; throws on network or server errors. */
   getProperty(id: string): Promise<Property | null>
   getPropertyBySlug(slug: string): Promise<Property | null>
   /** Phone number guests can call or WhatsApp; null unless the listing is live and its broker is active. */
   getListingContact(id: string): Promise<string | null>
+  /** The agent's name for "Listed by …"; null when they haven't set one or the listing isn't live. */
+  getListingAgentName(id: string): Promise<string | null>
+  /** A broker's public listings that are on the market, newest first. */
+  getBrokerListings(brokerId: string): Promise<Property[]>
   createProperty(brokerId: string, data: CreatePropertyInput): Promise<Property>
   updateProperty(id: string, data: UpdatePropertyInput): Promise<Property>
   deleteProperty(id: string): Promise<void>
 }
 
-// ── Supabase Implementation ───────────────────────────────────────────────────
+/** A lookup by an id that isn't a UUID is "not found", not a failure (old share links use `/:id`). */
+const INVALID_UUID = '22P02'
 
 class SupabasePropertyService implements IPropertyService {
   async getProperties(brokerId: string): Promise<Property[]> {
     const { data, error } = await supabase
       .from('properties')
-      .select('*, property_media!property_media_property_id_fkey(*)')
+      .select(PROPERTY_SELECT)
       .eq('broker_id', brokerId)
       .order('created_at', { ascending: false })
+      .returns<PropertyWithMediaRow[]>()
 
     if (error) throw new Error(error.message)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data ?? []).map(toProperty as any)
+    return (data ?? []).map(toProperty)
   }
 
   async getProperty(id: string): Promise<Property | null> {
     const { data, error } = await supabase
       .from('properties')
-      .select('*, property_media!property_media_property_id_fkey(*)')
+      .select(PROPERTY_SELECT)
       .eq('id', id)
-      .single()
+      .returns<PropertyWithMediaRow[]>()
+      .maybeSingle()
 
-    if (error) return null
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return toProperty(data as any)
+    if (error?.code === INVALID_UUID) return null
+    if (error) throw new Error(error.message)
+    return data ? toProperty(data) : null
   }
 
   async getPropertyBySlug(slug: string): Promise<Property | null> {
     const { data, error } = await supabase
       .from('properties')
-      .select('*, property_media!property_media_property_id_fkey(*)')
+      .select(PROPERTY_SELECT)
       .eq('slug', slug)
-      .single()
+      .returns<PropertyWithMediaRow[]>()
+      .maybeSingle()
 
-    if (error) return null
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return toProperty(data as any)
+    if (error) throw new Error(error.message)
+    return data ? toProperty(data) : null
   }
 
   async getListingContact(id: string): Promise<string | null> {
@@ -59,30 +65,50 @@ class SupabasePropertyService implements IPropertyService {
     return data || null
   }
 
-  async createProperty(brokerId: string, input: CreatePropertyInput): Promise<Property> {
-    const slug = generateSlug(input.title)
+  async getListingAgentName(id: string): Promise<string | null> {
+    const { data, error } = await supabase.rpc('get_listing_agent_name', { listing_id: id })
+    if (error) return null
+    return data?.trim() || null
+  }
+
+  async getBrokerListings(brokerId: string): Promise<Property[]> {
     const { data, error } = await supabase
       .from('properties')
-      .insert({ ...toRow(input), title: input.title, broker_id: brokerId, slug })
-      .select('*, property_media!property_media_property_id_fkey(*)')
+      .select(PROPERTY_SELECT)
+      .eq('broker_id', brokerId)
+      .eq('is_public', true)
+      .eq('status', 'available')
+      .order('created_at', { ascending: false })
+      .returns<PropertyWithMediaRow[]>()
+
+    if (error?.code === INVALID_UUID) return []
+    if (error) throw new Error(error.message)
+    return (data ?? []).map(toProperty)
+  }
+
+  async createProperty(brokerId: string, input: CreatePropertyInput): Promise<Property> {
+    const { data, error } = await supabase
+      .from('properties')
+      .insert({ ...toPropertyRow(input), title: input.title, broker_id: brokerId, slug: generateSlug(input.title) })
+      .select(PROPERTY_SELECT)
+      .returns<PropertyWithMediaRow[]>()
       .single()
 
     if (error) throw new Error(error.message)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return toProperty(data as any)
+    return toProperty(data)
   }
 
   async updateProperty(id: string, input: UpdatePropertyInput): Promise<Property> {
     const { data, error } = await supabase
       .from('properties')
-      .update(toRow(input))
+      .update(toPropertyRow(input))
       .eq('id', id)
-      .select('*, property_media!property_media_property_id_fkey(*)')
+      .select(PROPERTY_SELECT)
+      .returns<PropertyWithMediaRow[]>()
       .single()
 
     if (error) throw new Error(error.message)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return toProperty(data as any)
+    return toProperty(data)
   }
 
   async deleteProperty(id: string): Promise<void> {
@@ -91,87 +117,4 @@ class SupabasePropertyService implements IPropertyService {
   }
 }
 
-// ── Mappers ───────────────────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toProperty(row: Record<string, any>): Property {
-  return {
-    id: row.id,
-    brokerId: row.broker_id,
-    sessionId: row.session_id,
-    slug: row.slug,
-    title: row.title,
-    propertyType: row.property_type,
-    listingType: row.listing_type,
-    status: row.status,
-    price: row.price,
-    location: row.location,
-    locality: row.locality,
-    bedrooms: row.bedrooms,
-    bathrooms: row.bathrooms,
-    builtUpArea: row.built_up_area,
-    carpetArea: row.carpet_area,
-    furnishing: row.furnishing,
-    floor: row.floor,
-    totalFloors: row.total_floors,
-    parking: row.parking,
-    amenities: row.amenities ?? [],
-    description: row.description,
-    media: (row.property_media ?? []).map(toMedia),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toMedia(row: Record<string, any>) {
-  return {
-    id: row.id,
-    propertyId: row.property_id,
-    mediaType: row.media_type,
-    storagePath: row.storage_path,
-    category: row.category,
-    displayOrder: row.display_order,
-    isCover: row.is_cover,
-    createdAt: row.created_at,
-  }
-}
-
-function toRow(input: UpdatePropertyInput) {
-  return {
-    title: input.title,
-    status: input.status,
-    property_type: input.propertyType,
-    listing_type: input.listingType,
-    price: input.price,
-    location: input.location,
-    locality: input.locality,
-    bedrooms: input.bedrooms,
-    bathrooms: input.bathrooms,
-    built_up_area: input.builtUpArea,
-    carpet_area: input.carpetArea,
-    furnishing: input.furnishing,
-    floor: input.floor,
-    total_floors: input.totalFloors,
-    parking: input.parking,
-    amenities: input.amenities,
-    description: input.description,
-  }
-}
-
-function generateSlug(title: string): string {
-  const base = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 60)
-  const suffix = Math.random().toString(36).slice(2, 8)
-  return `${base}-${suffix}`
-}
-
-// ── Factory ───────────────────────────────────────────────────────────────────
-
-export function createPropertyService(): IPropertyService {
-  return new SupabasePropertyService()
-}
+export const propertyService: IPropertyService = new SupabasePropertyService()

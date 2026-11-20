@@ -1,0 +1,11 @@
+name = "findhouse-broker-sites"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# Every broker subdomain. The apex (findhouse.in) stays a custom domain on the Pages project.
+routes = [{ pattern = "*.findhouse.in/*", zone_name = "findhouse.in" }]
+
+[vars]
+SITE_DOMAIN = "findhouse.in"
+# The Pages project's own address (Workers & Pages → the project → Deployments → production URL).
+PAGES_ORIGIN = "https://findhouse.pages.dev"

@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { animate, motion, useReducedMotion, type Variants } from 'framer-motion'
-import { EntranceContext, easeOut, rise, stagger, useEntrance, useEntranceInitial } from '../motion'
-
-/** Pages that already played their entrance; cleared only by a full page load. */
-const entered = new Set<string>()
+import { EntranceContext, LandingContext, easeOut, entered, rise, stagger, useEntrance, useEntranceInitial } from '../motion'
 
 /** Lets a page animate in on its first visit after a refresh, and appear settled on every later visit. */
 export function PageEntrance({ pageKey, children }: { pageKey: string; children: ReactNode }) {
   const [first] = useState(() => !entered.has(pageKey))
+  const [landing] = useState(() => entered.size === 0)
   useEffect(() => { entered.add(pageKey) }, [pageKey])
-  return <EntranceContext.Provider value={first}>{children}</EntranceContext.Provider>
+  return (
+    <LandingContext.Provider value={landing}>
+      <EntranceContext.Provider value={first}>{children}</EntranceContext.Provider>
+    </LandingContext.Provider>
+  )
 }
 
 interface RevealProps {

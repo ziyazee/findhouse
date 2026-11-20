@@ -9,14 +9,14 @@ import { HeroSearch, PageHero } from '@/shared/components/PageHero/PageHero'
 import { heroPhoneOnly, heroSquareBtn } from '@/shared/components/PageHero/heroClasses'
 import { PHONE_QUERY, useMediaQuery } from '@/shared/hooks/useMediaQuery'
 import { PropertyCard, PropertyCardSkeleton } from '../components/PropertyCard'
-import { PropertyFilters, EMPTY_FILTERS, type FilterState } from '../components/PropertyFilters'
+import { PropertyFilters } from '../components/PropertyFilters'
 import { PropertyTable, PropertyTableSkeleton } from '../components/PropertyTable'
 import { usePropertyActions } from '../components/usePropertyActions'
 import { useProperties } from '../hooks/useProperties'
-import { LISTING_STATUSES, VIEW_PREF_KEY, listingStatus, type ListingStatus } from '../listingStatus'
+import { EMPTY_FILTERS, countByStatus, filterProperties, parseStatus, type FilterState } from '../propertyFilters'
+import { setPropertiesView, usePropertiesView, type PropertiesView } from '../viewPreference'
 import styles from './PropertiesPage.module.css'
 
-type View = 'grid' | 'table'
 export default function PropertiesPage() {
   const entranceInitial = useEntranceInitial()
   const { data: properties = [], isLoading, isError, refetch } = useProperties()
@@ -26,9 +26,9 @@ export default function PropertiesPage() {
     search: params.get('q') ?? '',
     status: parseStatus(params.get('status')),
   })
-  const [savedView, setView] = useState<View>(() => (localStorage.getItem(VIEW_PREF_KEY) as View) || 'table')
+  const savedView = usePropertiesView()
   const isPhone = useMediaQuery(PHONE_QUERY)
-  const view: View = isPhone ? 'grid' : savedView
+  const view: PropertiesView = isPhone ? 'grid' : savedView
   const [filtersOpen, setFiltersOpen] = useState(false)
   const actions = usePropertyActions()
   const q = params.get('q')
@@ -37,35 +37,15 @@ export default function PropertiesPage() {
     if (q !== null) setFilters((f) => ({ ...f, search: q }))
   }, [q])
 
-  function changeView(v: View) {
-    setView(v)
-    localStorage.setItem(VIEW_PREF_KEY, v)
-  }
-
-  const counts = useMemo(() => {
-    const c = { all: properties.length } as Record<ListingStatus | 'all', number>
-    for (const s of LISTING_STATUSES) c[s] = 0
-    for (const p of properties) c[listingStatus(p)]++
-    return c
-  }, [properties])
-
-  const filtered = useMemo(() => {
-    const q = filters.search.trim().toLowerCase()
-    return properties.filter((p) => {
-      if (q && ![p.title, p.location, p.locality].some((v) => v?.toLowerCase().includes(q))) return false
-      if (filters.status && listingStatus(p) !== filters.status) return false
-      if (filters.listingType && p.listingType !== filters.listingType) return false
-      if (filters.propertyType && p.propertyType !== filters.propertyType) return false
-      return true
-    })
-  }, [properties, filters])
+  const counts = useMemo(() => countByStatus(properties), [properties])
+  const filtered = useMemo(() => filterProperties(properties, filters), [properties, filters])
 
   const viewToggle = (
     <div className={styles.viewToggle} role="group" aria-label="Layout">
-      <button type="button" aria-pressed={view === 'table'} aria-label="List view" onClick={() => changeView('table')}>
+      <button type="button" aria-pressed={view === 'table'} aria-label="List view" onClick={() => setPropertiesView('table')}>
         <List size={16} aria-hidden="true" />
       </button>
-      <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" onClick={() => changeView('grid')}>
+      <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" onClick={() => setPropertiesView('grid')}>
         <LayoutGrid size={16} aria-hidden="true" />
       </button>
     </div>
@@ -179,7 +159,3 @@ export default function PropertiesPage() {
 }
 
 const listIn = riseAfter(0.3)
-
-function parseStatus(v: string | null): ListingStatus | '' {
-  return LISTING_STATUSES.includes(v as ListingStatus) ? (v as ListingStatus) : ''
-}

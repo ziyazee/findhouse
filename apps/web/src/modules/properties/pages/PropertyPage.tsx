@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Bath, BedDouble, ChevronDown, Copy, Ellipsis, ExternalLink, FilePen, Images, MapPin, Ruler, SearchX, Share2, Sofa, Trash2 } from 'lucide-react'
+import { Bath, BedDouble, ChevronDown, Copy, Ellipsis, ExternalLink, FilePen, Globe, Images, Lock, MapPin, Ruler, SearchX, Share2, Sofa, Trash2, TriangleAlert } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { ListingTypeBadge } from '@/shared/components/Badge'
 import { motion, type Variants } from 'framer-motion'
@@ -17,7 +17,11 @@ import { useProperty } from '../hooks/useProperty'
 import { useUpdateProperty } from '../hooks/usePropertyMutations'
 import { STATUS_META, STATUS_TO_DB, coverUrl, listingStatus, placeOf } from '../listingStatus'
 import { copyPropertyLink, shareProperty } from '../shareProperty'
+import { useMySite } from '@/modules/broker-site/useBrokerSite'
+import { depositLine, maintenanceLine } from '../listingExtras'
 import { ListingStatusBadge } from '../components/ListingStatusBadge'
+import { VisibilityBadge } from '../components/VisibilityBadge'
+import { hiddenReason } from '../visibility'
 import type { UpdatePropertyInput } from '../property.types'
 import styles from './PropertyPage.module.css'
 
@@ -29,9 +33,10 @@ export default function PropertyPage() {
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('details')
 
-  const { data: property, isLoading, refetch } = useProperty(id)
+  const { data: property, isLoading, isError, refetch } = useProperty(id)
   const { mutateAsync: update, isPending: saving } = useUpdateProperty(id!)
   const actions = usePropertyActions(() => navigate('/properties'))
+  const site = useMySite()
 
   async function handleSave(data: UpdatePropertyInput) {
     await update(data)
@@ -47,6 +52,22 @@ export default function PropertyPage() {
           <Skeleton width="45%" height={26} className={styles.loadingLine} />
           <Skeleton width="30%" height={12} className={styles.loadingLine} />
         </div>
+      </>
+    )
+  }
+
+  if (isError) {
+    return (
+      <>
+        <PageHero back={BACK} title="Couldn’t load this property" />
+        <Card className={heroBody}>
+          <EmptyState
+            icon={<TriangleAlert size={20} />}
+            title="Couldn’t load this property"
+            description="Check your connection and try again."
+            action={<Button variant="secondary" onClick={() => refetch()}>Try again</Button>}
+          />
+        </Card>
       </>
     )
   }
@@ -84,10 +105,11 @@ export default function PropertyPage() {
     onSelect: () => actions.changeStatus(property, STATUS_TO_DB[s]),
   }))
   const moreItems: MenuItem[] = [
-    { label: 'Copy public link', icon: <Copy size={16} />, onSelect: () => copyPropertyLink(property) },
+    { label: 'Copy public link', icon: <Copy size={16} />, onSelect: () => copyPropertyLink(property, site.listingUrl(property)) },
     { label: 'Delete property', icon: <Trash2 size={16} />, danger: true, separatorBefore: true, onSelect: () => actions.requestDelete(property) },
   ]
   const priceLabel = property.listingType === 'rent' ? 'Monthly rent' : 'Price'
+  const priceNotes = [maintenanceLine(property), depositLine(property)].filter((s): s is string => Boolean(s))
   const statusTrigger = <>Status: {STATUS_META[status].label}<ChevronDown size={16} aria-hidden="true" /></>
 
   return (
@@ -98,7 +120,7 @@ export default function PropertyPage() {
         className={styles.coverHero}
         actions={
           <>
-            <button type="button" className={heroGlassBtn} onClick={() => shareProperty(property)} aria-label="Share property">
+            <button type="button" className={heroGlassBtn} onClick={() => shareProperty(property, site.listingUrl(property))} aria-label="Share property">
               <Share2 size={18} aria-hidden="true" />
             </button>
             <Menu label="More actions" triggerClassName={heroGlassBtn} trigger={<Ellipsis size={20} aria-hidden="true" />} items={moreItems} />
@@ -122,6 +144,7 @@ export default function PropertyPage() {
           <div className={styles.eyebrow}>
             <ListingTypeBadge type={property.listingType} />
             <ListingStatusBadge property={property} />
+            <VisibilityBadge property={property} />
           </div>
           <h1 className={styles.sheetTitle}>{property.title}</h1>
           {placeOf(property) && <p className={styles.sheetPlace}><MapPin size={14} aria-hidden="true" />{placeOf(property)}</p>}
@@ -131,6 +154,7 @@ export default function PropertyPage() {
           {property.price
             ? <span className={styles.priceValue}>₹{property.price.toLocaleString('en-IN')}</span>
             : <span className={styles.priceEmpty}>Not set</span>}
+          {priceNotes.map((line) => <span key={line} className={styles.priceNote}>{line}</span>)}
         </div>
         {specs.length > 0 && (
           <motion.ul className={styles.tiles} variants={stagger(0.07)}>
@@ -146,13 +170,50 @@ export default function PropertyPage() {
           </motion.ul>
         )}
         <div className={styles.sheetActions}>
-          <Button as="a" href={`/p/${property.slug}`} target="_blank" rel="noreferrer" variant="secondary">
+          <Button as="a" href={site.listingUrl(property)} target="_blank" rel="noreferrer" variant="secondary">
             <ExternalLink size={16} aria-hidden="true" />
             Public page
           </Button>
           <Menu label="Change status" triggerClassName={styles.statusBtn} trigger={statusTrigger} items={statusItems} />
         </div>
       </motion.section>
+
+      <section className={styles.visibility} aria-labelledby="visibility-title">
+        <span className={styles.visibilityIcon} aria-hidden="true">
+          {property.isPublic ? <Globe size={18} /> : <Lock size={18} />}
+        </span>
+        <div className={styles.visibilityText}>
+          <h2 id="visibility-title">{property.isPublic ? 'Public listing' : 'Private listing'}</h2>
+          <p>
+            {property.isPublic
+              ? hiddenReason(property) ?? 'Shown on your public page, where anyone can find it.'
+              : 'Hidden from your public page and from search engines. Anyone you send the link to can still open it.'}
+          </p>
+          {property.isPublic && site.pageUrl && (
+            <a className={styles.visibilityLink} href={site.pageUrl} target="_blank" rel="noreferrer">
+              View your public page<ExternalLink size={14} aria-hidden="true" />
+            </a>
+          )}
+        </div>
+        <div className={styles.segment} role="group" aria-label="Who can find this listing">
+          <button
+            type="button"
+            aria-pressed={!property.isPublic}
+            disabled={actions.visibilityPending}
+            onClick={() => property.isPublic && actions.changeVisibility(property, false)}
+          >
+            <Lock size={16} aria-hidden="true" />Private
+          </button>
+          <button
+            type="button"
+            aria-pressed={property.isPublic}
+            disabled={actions.visibilityPending}
+            onClick={() => !property.isPublic && actions.changeVisibility(property, true)}
+          >
+            <Globe size={16} aria-hidden="true" />Public
+          </button>
+        </div>
+      </section>
 
       {status === 'draft' && (
         <div className={styles.notice} role="note">
@@ -208,11 +269,7 @@ export default function PropertyPage() {
 
       {tab === 'media' && (
         <div role="tabpanel" id="panel-media" aria-labelledby="tab-media">
-          <MediaGallery
-            propertyId={property.id}
-            media={property.media}
-            onUpdate={() => refetch()}
-          />
+          <MediaGallery propertyId={property.id} media={property.media} />
         </div>
       )}
 

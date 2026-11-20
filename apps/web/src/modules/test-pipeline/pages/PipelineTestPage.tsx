@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { createSubmissionService } from '@/modules/submissions/SubmissionService'
+import { submissionService } from '@/modules/submissions/SubmissionService'
 import { createSubmissionMessageService } from '@/modules/submissions/SubmissionMessageService'
 import { getMediaUrl } from '@/lib/storage'
 import type { Submission, SubmissionMessage, SubmissionStatus } from '@/modules/submissions/submission.types'
@@ -39,7 +39,6 @@ const CLASS_STATUS_CONFIG: Record<string, { label: string; color: string; bg: st
   FAILED:          { label: 'Classification failed',   color: 'var(--color-red)', bg: 'var(--color-red-soft)' },
 }
 
-const submissionSvc = createSubmissionService()
 const messageSvc = createSubmissionMessageService()
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -90,7 +89,7 @@ export default function PipelineTestPage() {
   const fetchSubmissions = useCallback(async () => {
     setFetchError(null)
     try {
-      const data = await submissionSvc.list()
+      const data = await submissionService.list()
       setSubmissions(data)
       setLastRefresh(new Date())
     } catch (err) {

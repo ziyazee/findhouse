@@ -153,6 +153,7 @@ export type Database = {
           cover_image_id: string | null
           image_classification_status: string | null
           image_classification_metadata: Record<string, unknown> | null
+          is_public: boolean
           created_at: string
           updated_at: string
         }
@@ -186,6 +187,7 @@ export type Database = {
           cover_image_id?: string | null
           image_classification_status?: string | null
           image_classification_metadata?: Record<string, unknown> | null
+          is_public?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -219,6 +221,7 @@ export type Database = {
           cover_image_id?: string | null
           image_classification_status?: string | null
           image_classification_metadata?: Record<string, unknown> | null
+          is_public?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -299,6 +302,18 @@ export type Database = {
       get_listing_contact: {
         Args: { listing_id: string }
         Returns: string | null
+      }
+      get_listing_agent_name: {
+        Args: { listing_id: string }
+        Returns: string | null
+      }
+      get_broker_page: {
+        Args: { page_broker_id?: string; page_subdomain?: string }
+        Returns: { id: string; name: string | null; phone: string; subdomain: string | null }[]
+      }
+      set_broker_subdomain: {
+        Args: { page_broker_id: string; new_subdomain: string }
+        Returns: string
       }
     }
     Enums: Record<string, never>

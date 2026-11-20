@@ -28,8 +28,19 @@ Deno.serve(async (req: Request) => {
     return new Response(String(err), { status: 400 })
   }
 
-  const appUrl = Deno.env.get('APP_URL') ?? 'https://findhouse.app'
-  const propertyUrl = `${appUrl}/p/${propertySlug}`
+  const appUrl = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
+  // With SITE_DOMAIN set (once *.findhouse.in reaches the app), the link uses the broker's own subdomain.
+  const siteDomain = Deno.env.get('SITE_DOMAIN')
+  let propertyUrl = `${appUrl}/p/${propertySlug}`
+  if (siteDomain) {
+    const { data } = await db
+      .from('properties')
+      .select('brokers(subdomain)')
+      .eq('slug', propertySlug)
+      .maybeSingle()
+    const broker = (data as { brokers?: { subdomain?: string | null } | null } | null)?.brokers
+    if (broker?.subdomain) propertyUrl = `https://${broker.subdomain}.${siteDomain}/p/${propertySlug}`
+  }
 
   const message =
     `✅ *${propertyTitle}* listing is ready!\n\n` +

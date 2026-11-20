@@ -43,7 +43,6 @@ export function Button({
   const isButton = Component === 'button'
 
   return (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <Component
       {...rest}
       className={classes}

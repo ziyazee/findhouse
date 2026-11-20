@@ -7,12 +7,11 @@ import { Item, Reveal } from '@/shared/components/Motion'
 import { PageHero } from '@/shared/components/PageHero/PageHero'
 import { pop, stagger, useEntranceInitial } from '@/shared/motion'
 import { heroBody } from '@/shared/components/PageHero/heroClasses'
+import { inr } from '@/shared/format'
 import { useDashboardData } from '@/modules/dashboard/hooks/useDashboardData'
 import { LISTING_STATUSES, STATUS_META } from '@/modules/properties/listingStatus'
-import type { Property } from '@/modules/properties/property.types'
+import { addedByMonth, rentByArea, submissionSuccess } from '../metrics'
 import styles from './PerformancePage.module.css'
-
-const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 
 export default function PerformancePage() {
   const entranceInitial = useEntranceInitial()
@@ -20,8 +19,7 @@ export default function PerformancePage() {
 
   const byArea = useMemo(() => rentByArea(properties), [properties])
   const months = useMemo(() => addedByMonth(properties), [properties])
-  const finished = intake.filter((s) => s.status === 'COMPLETED' || s.status === 'FAILED')
-  const success = finished.length ? intake.filter((s) => s.status === 'COMPLETED').length / finished.length : null
+  const { finished, rate: success } = submissionSuccess(intake)
   const maxMonth = Math.max(1, ...months.map((m) => m.count))
   const maxArea = Math.max(1, ...byArea.map((a) => a.avg))
   const showData = !isError && (isLoading || properties.length > 0)
@@ -62,7 +60,7 @@ export default function PerformancePage() {
               icon={<MessageCircle size={18} />}
               label="WhatsApp success rate"
               value={success === null ? '—' : `${Math.round(success * 100)}%`}
-              sub={`${finished.length} recent submissions`}
+              sub={`${finished} recent submissions`}
               loading={isLoading}
             />
           </motion.section>
@@ -156,34 +154,4 @@ function Kpi({ tint, icon, label, value, sub, loading }: {
       <span className={styles.kpiSub}>{sub}</span>
     </motion.div>
   )
-}
-
-function rentByArea(properties: Property[]) {
-  const map = new Map<string, { total: number; count: number }>()
-  for (const p of properties) {
-    if (p.listingType !== 'rent' || !p.price) continue
-    const area = p.locality ?? p.location
-    if (!area) continue
-    const e = map.get(area) ?? { total: 0, count: 0 }
-    e.total += p.price
-    e.count++
-    map.set(area, e)
-  }
-  return [...map.entries()]
-    .map(([area, e]) => ({ area, avg: e.total / e.count, count: e.count }))
-    .sort((a, b) => b.count - a.count || b.avg - a.avg)
-    .slice(0, 6)
-}
-
-function addedByMonth(properties: Property[]) {
-  const now = new Date()
-  return Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
-    const key = `${d.getFullYear()}-${d.getMonth()}`
-    const count = properties.filter((p) => {
-      const c = new Date(p.createdAt)
-      return c.getFullYear() === d.getFullYear() && c.getMonth() === d.getMonth()
-    }).length
-    return { key, label: d.toLocaleDateString('en-IN', { month: 'short' }), count }
-  })
 }

@@ -1,16 +1,14 @@
 import { create } from 'zustand'
+import { authService } from './AuthService'
 import type { AuthSession } from './auth.types'
 
 interface AuthState {
   session: AuthSession | null
-  isLoading: boolean
   setSession: (session: AuthSession | null) => void
-  setLoading: (loading: boolean) => void
 }
 
+/** Starts from the session saved on this device; `App` re-checks it with the server once on startup. */
 export const useAuthStore = create<AuthState>((set) => ({
-  session: null,
-  isLoading: true,
-  setSession: (session) => set({ session, isLoading: false }),
-  setLoading: (isLoading) => set({ isLoading }),
+  session: authService.getStoredSession(),
+  setSession: (session) => set({ session }),
 }))

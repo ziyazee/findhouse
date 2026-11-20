@@ -2,18 +2,12 @@ import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Search, X } from 'lucide-react'
 import { riseAfter, useEntranceInitial } from '@/shared/motion'
+import { capitalize } from '@/shared/format'
 import { LISTING_STATUSES, STATUS_META, type ListingStatus } from '../listingStatus'
 import type { ListingType } from '../property.types'
+import { EMPTY_FILTERS, hasFilters, type FilterState } from '../propertyFilters'
+import { PROPERTY_TYPES } from '../propertyOptions'
 import styles from './PropertyFilters.module.css'
-
-export interface FilterState {
-  search: string
-  status: ListingStatus | ''
-  listingType: ListingType | ''
-  propertyType: string
-}
-
-export const EMPTY_FILTERS: FilterState = { search: '', status: '', listingType: '', propertyType: '' }
 
 interface PropertyFiltersProps {
   filters: FilterState
@@ -30,16 +24,17 @@ interface PropertyFiltersProps {
 
 const toolbarIn = riseAfter(0.2)
 
-const PROPERTY_TYPES = ['apartment', 'house', 'villa', 'plot', 'commercial']
+/** Inactive listings stay under "All" (with their badge) but don't get a filter of their own. */
+const FILTER_STATUSES = LISTING_STATUSES.filter((s) => s !== 'inactive')
 
 export function PropertyFilters({ filters, onChange, counts, trailing, phoneHero = false, phoneFiltersOpen = false }: PropertyFiltersProps) {
   const entranceInitial = useEntranceInitial()
   const set = (patch: Partial<FilterState>) => onChange({ ...filters, ...patch })
-  const dirty = !!(filters.search || filters.status || filters.listingType || filters.propertyType)
+  const dirty = hasFilters(filters)
 
   const tabs: { value: ListingStatus | ''; label: string; count: number }[] = [
     { value: '', label: 'All', count: counts.all },
-    ...LISTING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label, count: counts[s] })),
+    ...FILTER_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label, count: counts[s] })),
   ]
 
   return (
@@ -103,7 +98,7 @@ export function PropertyFilters({ filters, onChange, counts, trailing, phoneHero
         >
           <option value="">All types</option>
           {PROPERTY_TYPES.map((t) => (
-            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            <option key={t} value={t}>{capitalize(t)}</option>
           ))}
         </select>
 

@@ -1,14 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { createPropertyService } from '../PropertyService'
-
-const svc = createPropertyService()
-
-export const PROPERTY_KEY = 'property'
+import { propertyService } from '../PropertyService'
+import { propertyKeys } from '../queryKeys'
 
 export function useProperty(id: string | undefined) {
   return useQuery({
-    queryKey: [PROPERTY_KEY, id],
-    queryFn: () => svc.getProperty(id!),
+    queryKey: propertyKeys.detail(id ?? ''),
+    queryFn: () => propertyService.getProperty(id ?? ''),
     enabled: !!id,
     staleTime: 30_000,
   })

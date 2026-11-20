@@ -4,6 +4,7 @@ import { Menu, type MenuItem } from '@/shared/components/Menu'
 import { Skeleton } from '@/shared/components/Card'
 import { coverUrl, formatDate, formatRent, placeOf } from '../listingStatus'
 import { ListingStatusBadge } from './ListingStatusBadge'
+import { VisibilityBadge } from './VisibilityBadge'
 import type { Property } from '../property.types'
 import styles from './PropertyTable.module.css'
 
@@ -44,6 +45,7 @@ export function PropertyTable({ properties, itemsFor }: PropertyTableProps) {
                       <span className={styles.place}>{placeOf(p)}</span>
                       <span className={styles.mobileMeta}>
                         <ListingStatusBadge property={p} />
+                        <VisibilityBadge property={p} />
                         <span className={styles.mobileRent}>{p.price ? formatRent(p) : 'No rent set'}</span>
                       </span>
                     </div>
@@ -52,7 +54,9 @@ export function PropertyTable({ properties, itemsFor }: PropertyTableProps) {
                 <td className={`${styles.cap} ${styles.hideMd}`}>{p.propertyType}</td>
                 <td className={`${styles.num} ${styles.hideMd}`}>{p.bedrooms ?? '—'}</td>
                 <td className={`${styles.num} ${styles.rent} ${styles.hideSm}`}>{formatRent(p)}</td>
-                <td className={styles.hideSm}><ListingStatusBadge property={p} /></td>
+                <td className={styles.hideSm}>
+                  <span className={styles.badges}><ListingStatusBadge property={p} /><VisibilityBadge property={p} /></span>
+                </td>
                 <td className={`${styles.muted} ${styles.hideLg}`}>{formatDate(p.createdAt)}</td>
                 <td className={styles.actions}>
                   <Menu

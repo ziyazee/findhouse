@@ -3,11 +3,26 @@ import type { Transition, Variants } from 'framer-motion'
 
 export const easeOut = [0.22, 1, 0.36, 1] as const
 
+/** Pages that already played their entrance; cleared only by a full page load. */
+export const entered = new Set<string>()
+
+/** Whether this page has already played its entrance since the app was loaded. */
+export function hasEntered(pageKey: string) {
+  return entered.has(pageKey)
+}
+
 /** Whether the current page should play its entrance animations (first visit since the page loaded). */
 export const EntranceContext = createContext(true)
 
 export function useEntrance() {
   return useContext(EntranceContext)
+}
+
+/** Whether the current page is the one the app was opened on, rather than one reached by navigating. */
+export const LandingContext = createContext(true)
+
+export function useIsLandingPage() {
+  return useContext(LandingContext)
 }
 
 /** `initial` prop for entrance animations: start hidden on a first visit, otherwise render settled. */

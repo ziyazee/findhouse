@@ -72,11 +72,27 @@ export async function finalizeSession(
 ): Promise<void> {
   const { error } = await db
     .from('whatsapp_submissions')
-    .update({ status: 'PROCESSING' })
+    .update({ status: 'PROCESSING', updated_at: new Date().toISOString() })
     .eq('id', sessionId)
     .eq('status', 'COLLECTING')   // guard: only advance if still COLLECTING
 
   if (error) throw new Error(`Failed to finalize submission: ${error.message}`)
+}
+
+/** A build stuck longer than this no longer counts as in progress. */
+const PROCESSING_STALE_MS = 10 * 60 * 1000
+
+/** Whether one of the broker's submissions is being built right now. */
+export async function hasProcessingSession(db: SupabaseClient, brokerId: string): Promise<boolean> {
+  const { data } = await db
+    .from('whatsapp_submissions')
+    .select('id')
+    .eq('broker_id', brokerId)
+    .eq('status', 'PROCESSING')
+    .gte('updated_at', new Date(Date.now() - PROCESSING_STALE_MS).toISOString())
+    .limit(1)
+
+  return (data?.length ?? 0) > 0
 }
 
 /** Marks a submission COMPLETED and links the generated property. */

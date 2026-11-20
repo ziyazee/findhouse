@@ -3,7 +3,7 @@
 export type MessageClassification = 'GREETING' | 'DONE' | 'PROPERTY_INFO' | 'OTHER'
 export type SessionStatus = 'COLLECTING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
 export type SubmissionStatus = SessionStatus
-export type MessageType = 'text' | 'image' | 'video' | 'document' | 'audio'
+export type MessageType = 'text' | 'image' | 'video' | 'document' | 'audio' | 'location'
 
 // ── WhatsApp API payload shapes ───────────────────────────────────────────────
 
@@ -45,6 +45,15 @@ export interface WAMessage {
   video?: { id: string; mime_type: string; sha256: string }
   document?: { id: string; mime_type: string; filename?: string }
   audio?: { id: string; mime_type: string }
+  location?: WALocation
+}
+
+/** A location pin the broker shared from WhatsApp's attachment menu. */
+export interface WALocation {
+  latitude: number
+  longitude: number
+  name?: string
+  address?: string
 }
 
 // ── Parsed / normalized message ───────────────────────────────────────────────

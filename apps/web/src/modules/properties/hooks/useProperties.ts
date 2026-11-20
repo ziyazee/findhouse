@@ -1,18 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
-import { createPropertyService } from '../PropertyService'
 import { useAuth } from '@/modules/auth/useAuth'
+import { propertyService } from '../PropertyService'
+import { propertyKeys } from '../queryKeys'
 
-const svc = createPropertyService()
-
-export const PROPERTIES_KEY = 'properties'
-
+/** The signed-in broker's properties, newest first. */
 export function useProperties() {
   const { user } = useAuth()
   const brokerId = user?.id ?? ''
 
   return useQuery({
-    queryKey: [PROPERTIES_KEY, brokerId],
-    queryFn: () => svc.getProperties(brokerId),
+    queryKey: propertyKeys.list(brokerId),
+    queryFn: () => propertyService.getProperties(brokerId),
     enabled: !!brokerId,
     staleTime: 30_000,
   })

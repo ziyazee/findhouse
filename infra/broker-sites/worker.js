@@ -1,0 +1,16 @@
+// Serves every broker subdomain (ravi-homes.findhouse.in) from the FindHouse build on Cloudflare Pages.
+// Pages can't take a wildcard custom domain, so this Worker sits on the `*.findhouse.in/*` route and fetches the
+// same files from the Pages project. The app reads the subdomain from the address bar, so nothing else is needed.
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url)
+
+    if (url.hostname === `www.${env.SITE_DOMAIN}`) {
+      url.hostname = env.SITE_DOMAIN
+      return Response.redirect(url.toString(), 301)
+    }
+
+    const upstream = new URL(url.pathname + url.search, env.PAGES_ORIGIN)
+    return fetch(new Request(upstream, request))
+  },
+}

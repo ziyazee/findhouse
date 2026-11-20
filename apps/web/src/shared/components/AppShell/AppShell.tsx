@@ -1,16 +1,20 @@
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
+import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import { LayoutGroup, MotionConfig, motion } from 'framer-motion'
 import {
   LayoutDashboard, Building2, CirclePlus, ChartColumn, Settings, LifeBuoy,
   Menu as MenuIcon, X, LogOut, ChevronsUpDown, Plus, UserRound,
 } from 'lucide-react'
 import logoMark from '@/assets/logo-mark.png'
-import { useAuth } from '@/modules/auth/useAuth'
+import { useAuth, useSignOut } from '@/modules/auth/useAuth'
+import { initials } from '@/shared/format'
 import { useProperties } from '@/modules/properties/hooks/useProperties'
-import { preloadBrokerPages } from '@/brokerPages'
-import { easeOut, spring } from '../../motion'
+import { preloadBrokerPages } from '@/app/brokerPages'
+import { PHONE_QUERY, useMediaQuery } from '@/shared/hooks/useMediaQuery'
+import { easeOut, hasEntered, spring } from '../../motion'
 import { PageEntrance } from '../Motion'
+import { PhoneBanner } from '../PageHero/PageHero'
+import { PhoneBannerContext } from '../PageHero/phoneBanner'
 import { Menu } from '../Menu'
 import styles from './AppShell.module.css'
 
@@ -59,16 +63,20 @@ const navIndex = (p: string) => {
 /** Persistent workspace layout: sidebar, phone tab bar and the current page. */
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
+  const handleLogout = useSignOut()
   const { data: properties } = useProperties()
   const { pathname } = useLocation()
-  const navigate = useNavigate()
   const outlet = useOutlet()
+  const isPhone = useMediaQuery(PHONE_QUERY)
+  const [bannerHeight, setBannerHeight] = useState<number | null>(null)
   const contentRef = useRef<HTMLElement>(null)
 
   // Slide the new page in from the side it sits on in the menu
-  const [page, setPage] = useState({ path: pathname, dir: 1 })
-  if (page.path !== pathname) setPage({ path: pathname, dir: navIndex(pathname) >= navIndex(page.path) ? 1 : -1 })
+  const [page, setPage] = useState({ path: pathname, dir: 1, revisit: false })
+  if (page.path !== pathname) {
+    setPage({ path: pathname, dir: navIndex(pathname) >= navIndex(page.path) ? 1 : -1, revisit: hasEntered(pathname) })
+  }
 
   useEffect(() => setDrawerOpen(false), [pathname])
 
@@ -92,12 +100,7 @@ export function AppShell() {
 
   const showTabs = !isTaskPage(pathname)
   const name = user?.name ?? 'Broker'
-  const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-
-  async function handleLogout() {
-    await logout()
-    navigate('/login')
-  }
+  const avatar = initials(name)
 
   function renderLink(item: NavItem) {
     const active = item.match ? item.match(pathname) : pathname === item.to
@@ -152,7 +155,7 @@ export function AppShell() {
               triggerClassName={styles.accountBtn}
               trigger={
                 <>
-                  <span className={styles.avatar} aria-hidden="true">{initials}</span>
+                  <span className={styles.avatar} aria-hidden="true">{avatar}</span>
                   <span className={styles.accountText}>
                     <span className={styles.accountName}>{name}</span>
                     <span className={styles.accountPhone}>+{user?.phone}</span>
@@ -182,19 +185,22 @@ export function AppShell() {
           </header>
 
           <main className={styles.content} ref={contentRef}>
-            <motion.div
-              key={pathname}
-              className={styles.container}
-              initial={{ opacity: 0, x: 28 * page.dir }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.45, ease: easeOut }}
-            >
-              <PageEntrance pageKey={pathname}>
-                <Suspense fallback={<div className={styles.pageLoading}><div className="spinner" /></div>}>
-                  {outlet}
-                </Suspense>
-              </PageEntrance>
-            </motion.div>
+            {isPhone && <PhoneBanner height={bannerHeight} className={styles.shellBanner} />}
+            {/* Outside the keyed page so a page still downloading keeps the previous one on screen instead of a spinner. */}
+            <Suspense fallback={<div className={`${styles.container} ${styles.page}`}><div className={styles.pageLoading}><div className="spinner" /></div></div>}>
+              <PhoneBannerContext.Provider value={isPhone ? setBannerHeight : null}>
+                <motion.div
+                  key={pathname}
+                  className={`${styles.container} ${styles.page} ${isPhone && page.revisit ? styles.settle : ''}`}
+                  // Phones switch tabs instantly: fading the full-bleed page in shows a blank screen first.
+                  initial={isPhone ? false : { opacity: 0, x: 28 * page.dir }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.45, ease: easeOut }}
+                >
+                  <PageEntrance pageKey={pathname}>{outlet}</PageEntrance>
+                </motion.div>
+              </PhoneBannerContext.Provider>
+            </Suspense>
           </main>
         </div>
 

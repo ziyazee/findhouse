@@ -1,28 +1,26 @@
 import type { ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ChartColumn, ChevronRight, House, Inbox, KeyRound, LifeBuoy, LogOut, Settings, Zap } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ChartColumn, ChevronRight, Globe, House, Inbox, KeyRound, LifeBuoy, LogOut, Settings, Zap } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Card, Skeleton } from '@/shared/components/Card'
 import { CountUp, Item, Reveal } from '@/shared/components/Motion'
 import { pop, rise, stagger } from '@/shared/motion'
 import { PageHero } from '@/shared/components/PageHero/PageHero'
 import { heroGlassBtn } from '@/shared/components/PageHero/heroClasses'
-import { useAuth } from '@/modules/auth/useAuth'
+import { useAuth, useSignOut } from '@/modules/auth/useAuth'
+import { initials } from '@/shared/format'
 import { useDashboardData } from '@/modules/dashboard/hooks/useDashboardData'
+import { useMySite } from '@/modules/broker-site/useBrokerSite'
 import styles from './ProfilePage.module.css'
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
+  const handleLogout = useSignOut()
   const { isLoading, summary } = useDashboardData({ withIntake: false })
+  const site = useMySite()
 
   const name = user?.name ?? 'Broker'
-  const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-
-  async function handleLogout() {
-    await logout()
-    navigate('/login')
-  }
+  const avatar = initials(name)
 
   return (
     <>
@@ -35,7 +33,7 @@ export default function ProfilePage() {
         }
       >
         <div className={styles.heroIdentity}>
-          <span className={styles.heroAvatar} aria-hidden="true">{initials}</span>
+          <span className={styles.heroAvatar} aria-hidden="true">{avatar}</span>
           <div className={styles.heroText}>
             <h1 className={styles.heroName}>{name}</h1>
             <p className={styles.heroPhone}>+{user?.phone}</p>
@@ -54,6 +52,15 @@ export default function ProfilePage() {
         <Item>
           <Card className={styles.menuCard}>
             <ul className={styles.menu}>
+              {site.pageUrl && (
+                <Row
+                  href={site.pageUrl}
+                  tint="peach"
+                  icon={<Globe size={18} />}
+                  title="Your public page"
+                  text={site.subdomain ? site.pageUrl.replace(/^https?:\/\/|\/$/g, '') : 'Your public listings, to share with anyone'}
+                />
+              )}
               <Row to="/settings" tint="mint" icon={<Settings size={18} />} title="Account settings" text="Your details and preferences" />
               <Row to="/performance" tint="green" icon={<ChartColumn size={18} />} title="Performance" text="Occupancy and rent by area" />
               <Row to="/enquiries" tint="lavender" icon={<Inbox size={18} />} title="Enquiries" text="Messages from your property pages" />
@@ -92,17 +99,30 @@ function Stat({ to, tint, icon, label, value, loading }: {
   )
 }
 
-function Row({ to, tint, icon, title, text }: { to: string; tint: Tint; icon: ReactNode; title: string; text: string }) {
+/** `to` for a workspace page; `href` for a link that opens in a new tab. */
+function Row({ to, href, tint, icon, title, text }: {
+  to?: string
+  href?: string
+  tint: Tint
+  icon: ReactNode
+  title: string
+  text: string
+}) {
+  const content = (
+    <>
+      <span className={`${styles.rowIcon} ${styles[`tint_${tint}`]}`} aria-hidden="true">{icon}</span>
+      <span className={styles.rowText}>
+        <span className={styles.rowTitle}>{title}</span>
+        <span className={styles.rowSub}>{text}</span>
+      </span>
+      <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
+    </>
+  )
   return (
     <li>
-      <Link to={to} className={styles.row}>
-        <span className={`${styles.rowIcon} ${styles[`tint_${tint}`]}`} aria-hidden="true">{icon}</span>
-        <span className={styles.rowText}>
-          <span className={styles.rowTitle}>{title}</span>
-          <span className={styles.rowSub}>{text}</span>
-        </span>
-        <ChevronRight size={18} className={styles.chevron} aria-hidden="true" />
-      </Link>
+      {href
+        ? <a href={href} target="_blank" rel="noreferrer" className={styles.row}>{content}</a>
+        : <Link to={to ?? '/'} className={styles.row}>{content}</Link>}
     </li>
   )
 }

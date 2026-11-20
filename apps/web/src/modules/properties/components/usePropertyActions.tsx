@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Archive, ExternalLink, KeyRound, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import { Archive, ExternalLink, Globe, KeyRound, Lock, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import type { MenuItem } from '@/shared/components/Menu'
 import { toast } from '@/shared/components/toastStore'
-import { useDeleteProperty, useSetPropertyStatus } from '../hooks/usePropertyMutations'
+import { useDeleteProperty, useSetPropertyStatus, useSetPropertyVisibility } from '../hooks/usePropertyMutations'
 import { STATUS_TO_DB } from '../listingStatus'
 import type { Property, PropertyStatus } from '../property.types'
+import { useMySite } from '@/modules/broker-site/useBrokerSite'
 
 const STATUS_DONE: Record<PropertyStatus, string> = {
   available: 'Marked as active',
@@ -17,6 +18,8 @@ export function usePropertyActions(onDeleted?: () => void) {
   const [toDelete, setToDelete] = useState<Property | null>(null)
   const del = useDeleteProperty()
   const setStatus = useSetPropertyStatus()
+  const setVisibility = useSetPropertyVisibility()
+  const site = useMySite()
 
   async function changeStatus(p: Property, status: PropertyStatus) {
     try {
@@ -24,6 +27,15 @@ export function usePropertyActions(onDeleted?: () => void) {
       toast.success(`${STATUS_DONE[status]}: ${p.title}`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not update the status')
+    }
+  }
+
+  async function changeVisibility(p: Property, isPublic: boolean) {
+    try {
+      await setVisibility.mutateAsync({ id: p.id, isPublic })
+      toast.success(`${isPublic ? 'Now public' : 'Now private'}: ${p.title}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not change who can see it')
     }
   }
 
@@ -42,7 +54,10 @@ export function usePropertyActions(onDeleted?: () => void) {
   function itemsFor(p: Property, { includeEdit = true } = {}): MenuItem[] {
     const items: MenuItem[] = []
     if (includeEdit) items.push({ label: 'Edit details', icon: <Pencil size={16} />, to: `/properties/${p.id}` })
-    items.push({ label: 'View public page', icon: <ExternalLink size={16} />, href: `/p/${p.slug}` })
+    items.push({ label: 'View public page', icon: <ExternalLink size={16} />, href: site.listingUrl(p) })
+    items.push(p.isPublic
+      ? { label: 'Make private', icon: <Lock size={16} />, onSelect: () => changeVisibility(p, false) }
+      : { label: 'Make public', icon: <Globe size={16} />, onSelect: () => changeVisibility(p, true) })
 
     const statusItems: MenuItem[] = []
     if (p.status !== 'available') {
@@ -85,5 +100,13 @@ export function usePropertyActions(onDeleted?: () => void) {
     />
   )
 
-  return { itemsFor, dialog, requestDelete: setToDelete, changeStatus, statusPending: setStatus.isPending }
+  return {
+    itemsFor,
+    dialog,
+    requestDelete: setToDelete,
+    changeStatus,
+    changeVisibility,
+    statusPending: setStatus.isPending,
+    visibilityPending: setVisibility.isPending,
+  }
 }

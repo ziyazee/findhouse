@@ -11,6 +11,16 @@ export interface Submission {
   messageCount?: number
 }
 
+/** A submission as the dashboard lists it: enough to show progress and link to the property. */
+export interface IntakeItem {
+  id: string
+  senderPhone: string
+  status: SubmissionStatus
+  failureReason: string | null
+  propertyId: string | null
+  createdAt: string
+}
+
 export interface SubmissionMessage {
   id: string
   submissionId: string

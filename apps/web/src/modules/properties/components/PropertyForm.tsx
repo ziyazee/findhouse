@@ -1,30 +1,26 @@
 import { motion } from 'framer-motion'
-import { useId, useState, type ReactNode } from 'react'
-import { AlignLeft, BedDouble, FileText, ListChecks, MapPin } from 'lucide-react'
+import { useId, useRef, useState, type ReactNode } from 'react'
+import { AlignLeft, ArrowLeft, BedDouble, CalendarCheck, FileText, ListChecks, MapPin, Plus, X } from 'lucide-react'
 import { Input } from '@/shared/components/Input'
 import { Button } from '@/shared/components/Button'
-import type { CreatePropertyInput, Property, UpdatePropertyInput } from '../property.types'
+import { capitalize } from '@/shared/format'
+import type { CreatePropertyInput, Property } from '../property.types'
+import {
+  extrasProblem, maintenanceHint, priceHint, suggestTitle, toFormState, toPropertyInput, type ExtraRow, type PropertyFormState,
+} from '../propertyFormModel'
+import {
+  AMENITY_OPTIONS, BALCONIES, BATHROOMS, BEDROOMS, FURNISHING_OPTIONS, PARKING_LABELS, PARKING_OPTIONS, PROPERTY_TYPES,
+} from '../propertyOptions'
 import { rise, stagger, useEntranceInitial } from '@/shared/motion'
 import styles from './PropertyForm.module.css'
 
-const PROPERTY_TYPES = ['apartment', 'house', 'villa', 'plot', 'commercial']
-const BEDROOMS = ['1', '2', '3', '4', '5', '6']
-const BATHROOMS = ['1', '2', '3', '4', '5']
-const FURNISHING_OPTS = ['unfurnished', 'semi-furnished', 'furnished']
-const PARKING_OPTS = ['none', 'open', 'covered', '1', '2']
-const PARKING_LABELS: Record<string, string> = { '1': '1 car', '2': '2 cars' }
-
-const AMENITY_OPTIONS = [
-  'Gym', 'Swimming Pool', 'Lift', 'Security', 'Power Backup',
-  'Clubhouse', 'Garden', 'Parking', 'CCTV', 'Intercom',
-  'Fire Safety', 'Wifi', 'Rainwater Harvesting', 'Maintenance Staff',
-]
-
 interface PropertyFormProps {
   initialValues?: Partial<Property>
-  onSubmit: (data: CreatePropertyInput | UpdatePropertyInput) => Promise<void>
+  onSubmit: (data: CreatePropertyInput) => Promise<void>
   submitLabel?: string
   isLoading?: boolean
+  /** Shows a back button beside the submit button on phones, where the page has no other way back. */
+  onBack?: () => void
 }
 
 export function PropertyForm({
@@ -32,33 +28,18 @@ export function PropertyForm({
   onSubmit,
   submitLabel = 'Save listing',
   isLoading = false,
+  onBack,
 }: PropertyFormProps) {
   const entranceInitial = useEntranceInitial()
-  const [form, setForm] = useState({
-    title: initialValues?.title ?? '',
-    propertyType: initialValues?.propertyType ?? 'apartment',
-    listingType: initialValues?.listingType ?? 'rent',
-    price: initialValues?.price?.toString() ?? '',
-    location: initialValues?.location ?? '',
-    locality: initialValues?.locality ?? '',
-    bedrooms: initialValues?.bedrooms?.toString() ?? '',
-    bathrooms: initialValues?.bathrooms?.toString() ?? '',
-    builtUpArea: initialValues?.builtUpArea?.toString() ?? '',
-    carpetArea: initialValues?.carpetArea?.toString() ?? '',
-    furnishing: initialValues?.furnishing ?? '',
-    floor: initialValues?.floor ?? '',
-    totalFloors: initialValues?.totalFloors?.toString() ?? '',
-    parking: initialValues?.parking ?? '',
-    amenities: initialValues?.amenities ?? [] as string[],
-    description: initialValues?.description ?? '',
-  })
+  const [form, setForm] = useState(() => toFormState(initialValues))
   const [error, setError] = useState('')
   const [titleError, setTitleError] = useState('')
+  const nextExtraId = useRef(0)
 
   const isRent = form.listingType === 'rent'
   const suggestedTitle = suggestTitle(form.bedrooms, form.propertyType, form.locality)
 
-  function set(key: keyof typeof form, value: string | string[]) {
+  function set<K extends keyof PropertyFormState>(key: K, value: PropertyFormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))
     setError('')
     if (key === 'title' || key === 'bedrooms' || key === 'locality') setTitleError('')
@@ -73,32 +54,25 @@ export function PropertyForm({
     )
   }
 
+  function setExtra(id: string, patch: Partial<ExtraRow>) {
+    set('extras', form.extras.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  }
+
+  function addExtra() {
+    const id = `new-${++nextExtraId.current}`
+    set('extras', [...form.extras, { id, label: '', value: '' }])
+    requestAnimationFrame(() => document.getElementById(`${id}-label`)?.focus())
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const title = form.title.trim() || suggestedTitle
     if (!title) { setTitleError('Add a title, or pick bedrooms or a locality and we’ll write one.'); return }
-
-    const payload: CreatePropertyInput = {
-      title,
-      propertyType: form.propertyType,
-      listingType: form.listingType as 'sale' | 'rent',
-      ...(form.price && { price: Number(form.price) }),
-      ...(form.location && { location: form.location.trim() }),
-      ...(form.locality && { locality: form.locality.trim() }),
-      ...(form.bedrooms && { bedrooms: Number(form.bedrooms) }),
-      ...(form.bathrooms && { bathrooms: Number(form.bathrooms) }),
-      ...(form.builtUpArea && { builtUpArea: Number(form.builtUpArea) }),
-      ...(form.carpetArea && { carpetArea: Number(form.carpetArea) }),
-      ...(form.furnishing && { furnishing: form.furnishing }),
-      ...(form.floor && { floor: form.floor.trim() }),
-      ...(form.totalFloors && { totalFloors: Number(form.totalFloors) }),
-      ...(form.parking && { parking: form.parking }),
-      amenities: form.amenities,
-      ...(form.description && { description: form.description.trim() }),
-    }
+    const problem = extrasProblem(form.extras)
+    if (problem) { setError(problem); return }
 
     try {
-      await onSubmit(payload)
+      await onSubmit(toPropertyInput(form, title))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
     }
@@ -154,7 +128,7 @@ export function PropertyForm({
                 value={form.price}
                 onChange={(e) => set('price', e.target.value)}
                 placeholder={isRent ? 'e.g. 45000' : 'e.g. 8500000'}
-                hint={formatPrice(form.price, isRent)}
+                hint={priceHint(form.price, isRent)}
               />
             </div>
             <Input
@@ -163,6 +137,25 @@ export function PropertyForm({
               onChange={(e) => set('location', e.target.value)}
               placeholder="e.g. 14 Sea View Apts, Carter Rd, Bandra West"
             />
+            <div className={styles.grid2}>
+              <Input
+                label="Security deposit (₹)"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={form.deposit}
+                onChange={(e) => set('deposit', e.target.value)}
+                placeholder={isRent ? 'e.g. 135000' : 'e.g. 500000'}
+                hint={priceHint(form.deposit, false)}
+              />
+              <Input
+                label="Maintenance (₹/month)"
+                value={form.maintenance}
+                onChange={(e) => set('maintenance', e.target.value)}
+                placeholder="e.g. 3500, or Included"
+                hint={maintenanceHint(form.maintenance)}
+              />
+            </div>
           </Section>
 
           <Section className={styles.description} icon={<AlignLeft size={18} />} tint="mint" title="Description" meta="Optional">
@@ -188,10 +181,11 @@ export function PropertyForm({
               <Input label="Floor" value={form.floor} onChange={(e) => set('floor', e.target.value)} placeholder="e.g. 5" />
               <Input label="Total floors" type="number" inputMode="numeric" min={0} value={form.totalFloors} onChange={(e) => set('totalFloors', e.target.value)} placeholder="12" />
             </div>
-            <Choices label="Furnishing" options={withValue(FURNISHING_OPTS, form.furnishing)} value={form.furnishing} onChange={(v) => set('furnishing', v)} />
+            <Choices label="Balconies" options={withValue(BALCONIES, form.balconies)} value={form.balconies} onChange={(v) => set('balconies', v)} compact />
+            <Choices label="Furnishing" options={withValue(FURNISHING_OPTIONS, form.furnishing)} value={form.furnishing} onChange={(v) => set('furnishing', v)} />
             <Choices
               label="Parking"
-              options={withValue(PARKING_OPTS, form.parking)}
+              options={withValue(PARKING_OPTIONS, form.parking)}
               value={form.parking}
               onChange={(v) => set('parking', v)}
               format={(o) => PARKING_LABELS[o] ?? capitalize(o)}
@@ -219,12 +213,62 @@ export function PropertyForm({
               ))}
             </div>
           </Section>
+
+          <Section className={styles.more} icon={<CalendarCheck size={18} />} tint="green" title="Availability and more" meta="Optional">
+            <Input
+              label={isRent ? 'Move-in' : 'Possession'}
+              value={form.moveInDate}
+              onChange={(e) => set('moveInDate', e.target.value)}
+              placeholder="e.g. Immediate, or 1st January"
+            />
+            <div className={styles.field}>
+              <span className={styles.label}>Other details</span>
+              {form.extras.length > 0 && (
+                <ul className={styles.extras}>
+                  {form.extras.map((row) => (
+                    <li key={row.id} className={styles.extra}>
+                      <input
+                        id={`${row.id}-label`}
+                        aria-label="Detail name"
+                        value={row.label}
+                        onChange={(e) => setExtra(row.id, { label: e.target.value })}
+                        placeholder="e.g. Facing"
+                      />
+                      <input
+                        aria-label={row.label ? `${row.label} value` : 'Detail value'}
+                        value={row.value}
+                        onChange={(e) => setExtra(row.id, { value: e.target.value })}
+                        placeholder="e.g. East"
+                      />
+                      <button
+                        type="button"
+                        className={styles.extraRemove}
+                        aria-label={row.label ? `Remove ${row.label}` : 'Remove this detail'}
+                        onClick={() => set('extras', form.extras.filter((r) => r.id !== row.id))}
+                      >
+                        <X size={16} aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button type="button" className={styles.extraAdd} onClick={addExtra}>
+                <Plus size={16} aria-hidden="true" />
+                Add a detail
+              </button>
+            </div>
+          </Section>
         </div>
       </div>
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 
       <div className={styles.actions}>
+        {onBack && (
+          <Button type="button" variant="secondary" className={styles.back} onClick={onBack} aria-label="Back">
+            <ArrowLeft size={20} aria-hidden="true" />
+          </Button>
+        )}
         <Button type="submit" variant="primary" loading={isLoading}>
           {submitLabel}
         </Button>
@@ -291,28 +335,4 @@ function Choices({ label, options, value, onChange, format = capitalize, compact
 /** Keeps a saved value selectable even when it isn't one of the quick options. */
 function withValue(options: string[], value: string) {
   return value && !options.includes(value) ? [...options, value] : options
-}
-
-function suggestTitle(bedrooms: string, propertyType: string, locality: string) {
-  if (!bedrooms && !locality.trim()) return ''
-  const type = capitalize(propertyType)
-  const head = bedrooms && propertyType !== 'plot' && propertyType !== 'commercial' ? `${bedrooms}BHK ${type}` : type
-  return locality.trim() ? `${head} in ${locality.trim()}` : head
-}
-
-function formatPrice(raw: string, isRent: boolean) {
-  const n = Number(raw)
-  if (!raw || !Number.isFinite(n) || n <= 0) return undefined
-  let text = `₹${n.toLocaleString('en-IN')}`
-  if (n >= 1e7) text = `₹${trim(n / 1e7)} crore`
-  else if (n >= 1e5) text = `₹${trim(n / 1e5)} lakh`
-  return isRent ? `${text} per month` : text
-}
-
-function trim(n: number) {
-  return Number(n.toFixed(2)).toString()
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { Button } from './Button'
 import styles from './ConfirmDialog.module.css'
@@ -18,6 +18,7 @@ export function ConfirmDialog({
   open, title, description, confirmLabel, tone = 'default', loading = false, onConfirm, onCancel,
 }: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
 
   useEffect(() => {
     const el = ref.current
@@ -30,7 +31,7 @@ export function ConfirmDialog({
     <dialog
       ref={ref}
       className={styles.dialog}
-      aria-labelledby="confirm-title"
+      aria-labelledby={titleId}
       onCancel={(e) => { e.preventDefault(); if (!loading) onCancel() }}
       onClick={(e) => { if (e.target === ref.current && !loading) onCancel() }}
     >
@@ -39,7 +40,7 @@ export function ConfirmDialog({
           <span className={styles.icon}><TriangleAlert size={20} aria-hidden="true" /></span>
         )}
         <div>
-          <h2 id="confirm-title" className={styles.title}>{title}</h2>
+          <h2 id={titleId} className={styles.title}>{title}</h2>
           <div className={styles.description}>{description}</div>
         </div>
       </div>

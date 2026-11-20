@@ -201,6 +201,12 @@
 
 .pageLoading { display: grid; place-items: center; min-height: 50vh; }
 
+.shellBanner { display: none; }
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
 .container {
   max-width: 1240px;
   margin: 0 auto;
@@ -275,6 +281,17 @@
   .topBar { display: none; }
   .container { padding-top: 0; }
 
+  /* The tab page is drawn over the shared banner: positioned (without a z-index, so fixed children
+     still escape) and after it, so it always paints on top */
+  .withTabs .content { position: relative; }
+  .withTabs .shellBanner { display: block; }
+  .withTabs .page { position: relative; pointer-events: none; }
+  .withTabs .page > * { pointer-events: auto; }
+
+  /* Returning to a tab: the banner and the page's header stay still while the content below settles in.
+     Fills backwards only, so no transform lingers to trap fixed-position children. */
+  .withTabs .settle > :not(:first-child) { animation: settle 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
   .tabBar {
     position: fixed;
     inset: auto 0 0 0;
@@ -316,6 +333,8 @@
   .tabPill { position: absolute; inset: 0; z-index: -1; border-radius: 16px; background: var(--color-accent-soft); }
 
   .tabAdd, .tabAdd.tabActive { background: none; }
+  /* Each tab is its own layer, stacked in page order: lift + so the sliding pill passes under it both ways */
+  .tabAdd { z-index: 1; }
   .tabAdd .tabIcon {
     position: absolute;
     top: -14px;

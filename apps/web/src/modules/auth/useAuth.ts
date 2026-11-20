@@ -1,22 +1,13 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from './AuthStore'
-import { createAuthService } from './AuthService'
+import { authService } from './AuthService'
 import type { LoginInput } from './auth.types'
 
-const authService = createAuthService()
-
 export function useAuth() {
-  const { session, isLoading } = useAuthStore()
-
-  useEffect(() => {
-    authService.getSession().then((s) => {
-      useAuthStore.getState().setSession(s)
-    })
-  }, [])
-
+  const session = useAuthStore((s) => s.session)
   const user = session?.user ?? null
-  const role = session?.user.role ?? null
-  const isAuthenticated = session !== null
 
   const login = useCallback(async (input: LoginInput) => {
     const newSession = await authService.login(input)
@@ -24,10 +15,18 @@ export function useAuth() {
     return newSession
   }, [])
 
-  const logout = useCallback(async () => {
+  return { session, user, role: user?.role ?? null, isAuthenticated: session !== null, login }
+}
+
+/** Signs out, drops every cached query so the next broker starts clean, and goes to the login page. */
+export function useSignOut() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  return useCallback(async () => {
     await authService.logout()
     useAuthStore.getState().setSession(null)
-  }, [])
-
-  return { session, isLoading, user, role, isAuthenticated, login, logout }
+    queryClient.clear()
+    navigate('/login')
+  }, [navigate, queryClient])
 }

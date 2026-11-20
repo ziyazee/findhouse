@@ -13,8 +13,6 @@ export const STATUS_META: Record<ListingStatus, { label: string; variant: BadgeV
   inactive: { label: 'Inactive', variant: 'grey',  hint: 'Taken off the market' },
 }
 
-export const VIEW_PREF_KEY = 'findhouse_properties_view'
-
 // Draft is derived: the DB only stores available | rented | sold.
 export function isComplete(p: Property) {
   return !!p.price && p.media.some((m) => m.mediaType === 'image')

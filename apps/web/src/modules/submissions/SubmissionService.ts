@@ -1,8 +1,14 @@
 import { supabase } from '@/lib/supabase'
-import type { Submission, SubmissionStatus } from './submission.types'
+import type { Database } from '@/lib/database.types'
+import type { IntakeItem, Submission, SubmissionStatus } from './submission.types'
+
+type SubmissionRow = Database['public']['Tables']['whatsapp_submissions']['Row']
+type SubmissionUpdate = Database['public']['Tables']['whatsapp_submissions']['Update']
 
 export interface ISubmissionService {
   list(options?: { status?: SubmissionStatus }): Promise<Submission[]>
+  /** A broker's most recent WhatsApp submissions, newest first. */
+  listForBroker(brokerId: string, limit: number): Promise<IntakeItem[]>
   get(id: string): Promise<Submission | null>
   updateStatus(id: string, status: SubmissionStatus): Promise<void>
 }
@@ -21,31 +27,46 @@ class SupabaseSubmissionService implements ISubmissionService {
     return (data ?? []).map(toSubmission)
   }
 
+  async listForBroker(brokerId: string, limit: number): Promise<IntakeItem[]> {
+    const { data, error } = await supabase
+      .from('whatsapp_submissions')
+      .select('id, sender_phone, status, failure_reason, property_id, created_at')
+      .eq('broker_id', brokerId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) throw new Error(error.message)
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      senderPhone: r.sender_phone,
+      status: r.status as SubmissionStatus,
+      failureReason: r.failure_reason,
+      propertyId: r.property_id,
+      createdAt: r.created_at,
+    }))
+  }
+
   async get(id: string): Promise<Submission | null> {
     const { data, error } = await supabase
       .from('whatsapp_submissions')
       .select('*')
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
-    if (error) return null
-    return toSubmission(data)
+    if (error) throw new Error(error.message)
+    return data ? toSubmission(data) : null
   }
 
   async updateStatus(id: string, status: SubmissionStatus): Promise<void> {
-    const patch: Record<string, string> = { status }
+    const patch: SubmissionUpdate = { status }
     if (status === 'COMPLETED') patch.completed_at = new Date().toISOString()
 
-    const { error } = await supabase
-      .from('whatsapp_submissions')
-      .update(patch as { status?: string; completed_at?: string })
-      .eq('id', id)
-
+    const { error } = await supabase.from('whatsapp_submissions').update(patch).eq('id', id)
     if (error) throw new Error(error.message)
   }
 }
 
-function toSubmission(row: { id: string; sender_phone: string; status: string; property_id: string | null; completed_at: string | null; created_at: string }): Submission {
+function toSubmission(row: SubmissionRow): Submission {
   return {
     id: row.id,
     senderPhone: row.sender_phone,
@@ -56,6 +77,4 @@ function toSubmission(row: { id: string; sender_phone: string; status: string; p
   }
 }
 
-export function createSubmissionService(): ISubmissionService {
-  return new SupabaseSubmissionService()
-}
+export const submissionService: ISubmissionService = new SupabaseSubmissionService()

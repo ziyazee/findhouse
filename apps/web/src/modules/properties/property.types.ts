@@ -15,7 +15,8 @@ export interface PropertyMedia {
 
 export interface Property {
   id: string
-  brokerId: string
+  /** Null only if the broker record was removed; properties outlive their broker. */
+  brokerId: string | null
   sessionId: string | null
   slug: string
   title: string
@@ -23,42 +24,57 @@ export interface Property {
   listingType: ListingType
   status: PropertyStatus
   price: number | null
+  deposit: number | null
   location: string | null
   locality: string | null
   bedrooms: number | null
   bathrooms: number | null
+  balconies: number | null
   builtUpArea: number | null
   carpetArea: number | null
   furnishing: string | null
   floor: string | null
   totalFloors: number | null
   parking: string | null
+  /** Free text from the extractor, e.g. "immediate" or "1st January". */
+  moveInDate: string | null
   amenities: string[]
   description: string | null
+  /** Extra details, under keys the extractor chose (e.g. "maintenanceCharge") or labels the broker typed. */
+  other: Record<string, unknown>
+  /** Shown on the broker's public page. A private listing still opens from its link. */
+  isPublic: boolean
   media: PropertyMedia[]
   createdAt: string
   updatedAt: string
 }
 
+/** Optional fields: omit to leave unchanged, `null` to clear. */
 export interface CreatePropertyInput {
   title: string
   propertyType: string
   listingType: ListingType
-  price?: number
-  location?: string
-  locality?: string
-  bedrooms?: number
-  bathrooms?: number
-  builtUpArea?: number
-  carpetArea?: number
-  furnishing?: string
-  floor?: string
-  totalFloors?: number
-  parking?: string
+  price?: number | null
+  deposit?: number | null
+  location?: string | null
+  locality?: string | null
+  bedrooms?: number | null
+  bathrooms?: number | null
+  balconies?: number | null
+  builtUpArea?: number | null
+  carpetArea?: number | null
+  furnishing?: string | null
+  floor?: string | null
+  totalFloors?: number | null
+  parking?: string | null
+  moveInDate?: string | null
   amenities?: string[]
-  description?: string
+  description?: string | null
+  /** Replaces the whole set of extra details. */
+  other?: Record<string, unknown>
 }
 
 export type UpdatePropertyInput = Partial<CreatePropertyInput> & {
   status?: PropertyStatus
+  isPublic?: boolean
 }

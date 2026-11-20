@@ -1,5 +1,4 @@
-import { useState, type CSSProperties } from 'react'
-import { useNavigate } from 'react-router-dom'
+import type { CSSProperties } from 'react'
 import { Check, LayoutGrid, List, LogOut } from 'lucide-react'
 import { Badge } from '@/shared/components/Badge'
 import { Button } from '@/shared/components/Button'
@@ -8,26 +7,21 @@ import { Item, Reveal } from '@/shared/components/Motion'
 import { PageHero } from '@/shared/components/PageHero/PageHero'
 import { heroBody } from '@/shared/components/PageHero/heroClasses'
 import { toast } from '@/shared/components/toastStore'
-import { useAuth } from '@/modules/auth/useAuth'
-import { VIEW_PREF_KEY } from '@/modules/properties/listingStatus'
+import { useAuth, useSignOut } from '@/modules/auth/useAuth'
+import { setPropertiesView, usePropertiesView, type PropertiesView } from '@/modules/properties/viewPreference'
 import { THEMES, setTheme, useTheme } from '@/shared/theme'
+import { PublicSiteCard } from '../components/PublicSiteCard'
 import styles from './SettingsPage.module.css'
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [view, setView] = useState(() => localStorage.getItem(VIEW_PREF_KEY) || 'table')
+  const { user } = useAuth()
+  const handleLogout = useSignOut()
+  const view = usePropertiesView()
   const theme = useTheme()
 
-  function chooseView(v: 'table' | 'grid') {
-    setView(v)
-    localStorage.setItem(VIEW_PREF_KEY, v)
+  function chooseView(v: PropertiesView) {
+    setPropertiesView(v)
     toast.success(`Properties will open in ${v === 'table' ? 'list' : 'grid'} view`)
-  }
-
-  async function handleLogout() {
-    await logout()
-    navigate('/login')
   }
 
   return (
@@ -53,6 +47,10 @@ export default function SettingsPage() {
               </div>
             </dl>
           </Card>
+        </Item>
+
+        <Item>
+          <PublicSiteCard />
         </Item>
 
         <Item>

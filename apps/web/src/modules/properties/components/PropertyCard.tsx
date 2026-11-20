@@ -4,7 +4,9 @@ import { Menu, type MenuItem } from '@/shared/components/Menu'
 import { Skeleton } from '@/shared/components/Card'
 import { coverUrl, formatDate, formatRent, placeOf } from '../listingStatus'
 import { ListingStatusBadge } from './ListingStatusBadge'
+import { VisibilityBadge } from './VisibilityBadge'
 import { shareProperty } from '../shareProperty'
+import { useMySite } from '@/modules/broker-site/useBrokerSite'
 import type { Property } from '../property.types'
 import styles from './PropertyCard.module.css'
 
@@ -20,6 +22,7 @@ interface PropertyCardProps {
 export function PropertyCard({ property: p, menuItems, compact = false, shareOnPhone = false }: PropertyCardProps) {
   const img = coverUrl(p)
   const photos = p.media.filter((m) => m.mediaType === 'image').length
+  const site = useMySite()
 
   return (
     <article className={`${styles.card} ${compact ? styles.compact : ''}`}>
@@ -32,7 +35,7 @@ export function PropertyCard({ property: p, menuItems, compact = false, shareOnP
             <span>No photos yet</span>
           </div>
         )}
-        <div className={styles.badge}><ListingStatusBadge property={p} /></div>
+        <div className={styles.badge}><ListingStatusBadge property={p} /><VisibilityBadge property={p} /></div>
         {photos > 0 && (
           <span className={styles.photoCount}>
             <Images size={12} aria-hidden="true" />
@@ -51,7 +54,7 @@ export function PropertyCard({ property: p, menuItems, compact = false, shareOnP
             <button
               type="button"
               className={`${styles.shareBtn} ${compact ? '' : styles.phoneOnly}`}
-              onClick={() => shareProperty(p)}
+              onClick={() => shareProperty(p, site.listingUrl(p))}
               aria-label={`Share ${p.title}`}
             >
               <Share2 size={16} aria-hidden="true" />

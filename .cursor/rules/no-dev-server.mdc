@@ -1,0 +1,10 @@
+---
+description: Never start dev servers or run screenshot checks unless the user asks
+alwaysApply: true
+---
+
+# Don't run servers
+
+- Never start `vite`, `npm run dev`, `vite preview` or any other server on your own.
+- Don't take Playwright or browser screenshots to check your work unless the user asks for it.
+- Make the requested file changes and stop. The user runs the dev server and checks the result themselves.

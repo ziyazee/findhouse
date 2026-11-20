@@ -1,82 +1,76 @@
 import { useRef, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { getMediaUrl } from '@/lib/storage'
-import { ImagePlus, Star, Trash2, Upload } from 'lucide-react'
+import { ImagePlus, Pencil, Star, Tag, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { toast } from '@/shared/components/toastStore'
+import { titleCase } from '@/shared/format'
+import { useDeleteMedia, useSetCover, useSetMediaCategory, useUploadMedia } from '../hooks/usePropertyMutations'
+import { roomName } from '../mediaRooms'
 import type { PropertyMedia } from '../property.types'
+import { RoomPicker } from './RoomPicker'
 import styles from './MediaGallery.module.css'
-
-const UPLOAD_API = '/api/upload'
 
 interface MediaGalleryProps {
   propertyId: string
   media: PropertyMedia[]
-  onUpdate: () => void
 }
 
-export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps) {
+export function MediaGallery({ propertyId, media }: MediaGalleryProps) {
   const fileInput = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [toDelete, setToDelete] = useState<PropertyMedia | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [toTag, setToTag] = useState<PropertyMedia | null>(null)
+  const upload = useUploadMedia(propertyId)
+  const setCover = useSetCover(propertyId)
+  const setCategory = useSetMediaCategory(propertyId)
+  const remove = useDeleteMedia()
+  const uploading = upload.isPending
 
   const sorted = [...media].sort((a, b) => a.displayOrder - b.displayOrder)
 
   async function handleUpload(files: FileList | null) {
-    if (!files || files.length === 0) return
-    setUploading(true)
+    if (!files || files.length === 0 || uploading) return
     setError('')
-
-    for (const file of Array.from(files)) {
-      const ext = file.name.split('.').pop()
-      const path = `properties/${propertyId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-
-      const form = new FormData()
-      form.append('file', file)
-      form.append('key', path)
-
-      const res = await fetch(UPLOAD_API, { method: 'POST', body: form })
-      if (!res.ok) {
-        setError(`Upload failed: ${await res.text()}`)
-        continue
-      }
-
-      const mediaType = file.type.startsWith('video') ? 'video' : 'image'
-      const isFirstMedia = media.length === 0
-
-      await supabase.from('property_media').insert({
-        property_id: propertyId,
-        media_type: mediaType,
-        storage_path: path,
-        display_order: media.length,
-        is_cover: isFirstMedia,
-      })
+    try {
+      const { failures } = await upload.mutateAsync({ files: Array.from(files), existing: media })
+      if (failures.length) setError(`Some files weren’t added. ${failures.join('. ')}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed. Please try again.')
+    } finally {
+      if (fileInput.current) fileInput.current.value = ''
     }
-
-    setUploading(false)
-    onUpdate()
-    if (fileInput.current) fileInput.current.value = ''
   }
 
   async function handleSetCover(mediaId: string) {
-    await supabase.from('property_media').update({ is_cover: false }).eq('property_id', propertyId)
-    await supabase.from('property_media').update({ is_cover: true }).eq('id', mediaId)
-    onUpdate()
-    toast.success('Cover photo updated')
+    try {
+      await setCover.mutateAsync(mediaId)
+      toast.success('Cover photo updated')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Couldn’t change the cover photo')
+    }
+  }
+
+  async function handlePickRoom(item: PropertyMedia, category: string) {
+    setToTag(null)
+    if (item.category?.toUpperCase() === category) return
+    try {
+      await setCategory.mutateAsync({ mediaId: item.id, category })
+      toast.success(`Moved to ${titleCase(category)}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Couldn’t change the room. Please try again.')
+    }
   }
 
   async function handleDelete(item: PropertyMedia) {
-    setDeleting(true)
-    await fetch(`${UPLOAD_API}?key=${encodeURIComponent(item.storagePath)}`, { method: 'DELETE' })
-    const { error: dbError } = await supabase.from('property_media').delete().eq('id', item.id)
-    setDeleting(false)
-    setToDelete(null)
-    onUpdate()
-    if (dbError) toast.error(dbError.message)
-    else toast.success(item.mediaType === 'video' ? 'Video removed' : 'Photo removed')
+    try {
+      await remove.mutateAsync(item)
+      toast.success(item.mediaType === 'video' ? 'Video removed' : 'Photo removed')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Couldn’t remove it. Please try again.')
+    } finally {
+      setToDelete(null)
+    }
   }
 
   return (
@@ -118,6 +112,7 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
           {sorted.map((item) => {
             const isVideo = item.mediaType === 'video'
             const url = getMediaUrl(item.storagePath)
+            const room = roomName(item.category)
 
             return (
               <div key={item.id} className={`${styles.item} ${item.isCover ? styles.coverItem : ''}`}>
@@ -127,7 +122,22 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
                   <img src={url} alt="" className={styles.thumb} loading="lazy" />
                 )}
 
-                {item.isCover && <span className={styles.coverBadge}><Star size={12} aria-hidden="true" />Cover</span>}
+                {item.isCover && (
+                  <span className={styles.coverBadge} aria-label="Cover">
+                    <Star size={12} aria-hidden="true" /><span className={styles.coverText}>Cover</span>
+                  </span>
+                )}
+                {!isVideo && (
+                  <button
+                    type="button"
+                    className={`${styles.roomTag} ${room ? '' : styles.roomTagEmpty}`}
+                    onClick={() => setToTag(item)}
+                    aria-label={room ? `Room: ${room}. Change room` : 'Choose a room for this photo'}
+                  >
+                    {room ? <Pencil size={12} aria-hidden="true" /> : <Tag size={12} aria-hidden="true" />}
+                    <span>{room ?? 'Add room'}</span>
+                  </button>
+                )}
 
                 <div className={styles.actions}>
                   {!item.isCover && !isVideo ? (
@@ -157,13 +167,15 @@ export function MediaGallery({ propertyId, media, onUpdate }: MediaGalleryProps)
         </p>
       )}
 
+      <RoomPicker item={toTag} onPick={(c) => toTag && handlePickRoom(toTag, c)} onClose={() => setToTag(null)} />
+
       <ConfirmDialog
         open={!!toDelete}
         tone="danger"
         title={toDelete?.mediaType === 'video' ? 'Delete this video?' : 'Delete this photo?'}
         description="It will be removed from the property and its public page."
         confirmLabel="Delete"
-        loading={deleting}
+        loading={remove.isPending}
         onConfirm={() => toDelete && handleDelete(toDelete)}
         onCancel={() => setToDelete(null)}
       />

@@ -5,11 +5,33 @@ import {
   completeSession,
   failSession,
 } from '../_shared/sessionManager.ts'
+import { failedText, listingUrl, readyText } from '../_shared/conversation.ts'
+import { sendWAMessage } from '../_shared/whatsappClient.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
+
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
+const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || undefined
+
+async function sendText(to: string, body: string): Promise<void> {
+  await sendWAMessage(to, body).catch((err) => console.error('[process-submission] WhatsApp reply failed:', err))
+}
+
+/** `*` so this still works before migration 012 (subdomain) has run. */
+async function loadBroker(brokerId: string | null): Promise<{ plan: string | null; subdomain: string | null } | null> {
+  if (!brokerId) return null
+  const { data } = await db.from('brokers').select('*').eq('id', brokerId).maybeSingle()
+  return data ? { plan: data.plan ?? null, subdomain: data.subdomain ?? null } : null
+}
+
+/** A failed build doesn't use up the free listing; tell a trial broker to send it again. */
+async function tellTrialBrokerFailed(brokerId: string | null, phone: string): Promise<void> {
+  const broker = await loadBroker(brokerId)
+  if (broker?.plan === 'trial') await sendText(phone, failedText())
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
@@ -53,6 +75,7 @@ Deno.serve(async (req: Request) => {
 
     if (propertyMessages.length === 0) {
       await failSession(db, sessionId, 'No property information found in this submission.')
+      await tellTrialBrokerFailed(session.broker_id, session.sender_phone)
       return new Response('No property content', { status: 422 })
     }
 
@@ -61,6 +84,7 @@ Deno.serve(async (req: Request) => {
     // ── 2. AI extraction ────────────────────────────────────────────────────
     const extracted = await extractPropertyData(propertyMessages, Deno.env.get('SUPABASE_URL')!)
     console.log(`[process-submission] Extracted: ${extracted.title}`)
+    const mapLink = firstMapsLink(messages)
 
     // ── 3. Generate slug ────────────────────────────────────────────────────
     const slug = generateSlug(extracted.title)
@@ -88,6 +112,7 @@ Deno.serve(async (req: Request) => {
         parking: extracted.parking,
         amenities: extracted.amenities,
         description: extracted.description,
+        ...(mapLink && { other: { mapLink } }),
         raw_data: extracted,
       })
       .select('id, slug')
@@ -121,22 +146,22 @@ Deno.serve(async (req: Request) => {
     // ── 6. Mark session COMPLETED ───────────────────────────────────────────
     await completeSession(db, sessionId, property.id)
 
-    // ── 7. Send WhatsApp notification (fire-and-forget) ─────────────────────
+    // ── 7. Use up the free listing, then send the link ──────────────────────
     const supabaseUrl  = Deno.env.get('SUPABASE_URL')!
     const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    fetch(`${supabaseUrl}/functions/v1/send-notification`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({
-        phoneNumber:   session.sender_phone,
-        propertySlug:  property.slug,
-        propertyTitle: extracted.title,
-      }),
-    }).catch((err) => console.error('[process-submission] Notification failed:', err))
+    // Before the broker hears about it, so their next message gets the plans.
+    const broker = await loadBroker(session.broker_id)
+    if (broker?.plan === 'trial') {
+      const { error: trialError } = await db.from('brokers')
+        .update({ trial_used_at: new Date().toISOString() })
+        .eq('id', session.broker_id)
+        .is('trial_used_at', null)
+      if (trialError) console.error(`[process-submission] Could not mark trial used: ${trialError.message}`)
+    }
+
+    const url = listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain)
+    await sendText(session.sender_phone, readyText(extracted.title, url, APP_URL))
 
     // ── 8. Classify property images (fire-and-forget) ────────────────────────
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {
@@ -156,12 +181,25 @@ Deno.serve(async (req: Request) => {
     const reason = err instanceof Error ? err.message : String(err)
     console.error(`[process-submission] Failed: ${reason}`)
     await failSession(db, sessionId, reason).catch(() => {})
+    await tellTrialBrokerFailed(session.broker_id, session.sender_phone).catch(() => {})
     return new Response(JSON.stringify({ ok: false, error: reason }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })
   }
 })
+
+/** Keep in step with `MAPS_URL` in apps/web/src/modules/properties/listingExtras.ts. */
+const MAPS_URL = /https?:\/\/(?:www\.)?(?:google\.[a-z.]{2,6}\/maps|maps\.google\.[a-z.]{2,6}|maps\.app\.goo\.gl|goo\.gl\/maps)[^\s"'<>]*/i
+
+/** The first Google Maps link the broker sent: pasted in a message, or a location pin the webhook stored as one. */
+function firstMapsLink(messages: Array<{ content: string | null }>): string | null {
+  for (const m of messages) {
+    const link = m.content && MAPS_URL.exec(m.content)?.[0].replace(/[.,;)\]]+$/, '')
+    if (link) return link
+  }
+  return null
+}
 
 function generateSlug(title: string): string {
   const base = title

@@ -60,6 +60,9 @@
   --radius-lg: 20px;
   --radius-xl: 24px;
 
+  /* Phone tab pages with a search bar: one banner height, so the search sits at the same spot */
+  --phone-hero-height: calc(278px + env(safe-area-inset-top));
+
   --color-field: #f3f5f8;
 
   /* Tinted tiles: background, then icon colour */

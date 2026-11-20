@@ -1,18 +1,20 @@
-.hero {
+.hero, .phoneBanner {
   --hero-image: url('../../../assets/hero-building-navy.jpg');
-  position: relative;
-  display: block;
   color: #fff;
 }
-:global([data-theme='green']) .hero { --hero-image: url('../../../assets/hero-building.jpg'); }
-:global([data-theme='burgundy']) .hero { --hero-image: url('../../../assets/hero-building-burgundy.jpg'); }
-:global([data-theme='charcoal']) .hero { --hero-image: url('../../../assets/hero-building-charcoal.jpg'); }
-:global([data-theme='aubergine']) .hero { --hero-image: url('../../../assets/hero-building-aubergine.jpg'); }
-:global([data-theme='peacock']) .hero { --hero-image: url('../../../assets/hero-building-peacock.jpg'); }
-:global([data-theme='espresso']) .hero { --hero-image: url('../../../assets/hero-building-espresso.jpg'); }
-:global([data-theme='cognac']) .hero { --hero-image: url('../../../assets/hero-building-cognac.jpg'); }
-:global([data-theme='olive']) .hero { --hero-image: url('../../../assets/hero-building-olive.jpg'); }
-:global([data-theme='indigo']) .hero { --hero-image: url('../../../assets/hero-building-indigo.jpg'); }
+.hero {
+  position: relative;
+  display: block;
+}
+:global([data-theme='green']) .hero, :global([data-theme='green']) .phoneBanner { --hero-image: url('../../../assets/hero-building.jpg'); }
+:global([data-theme='burgundy']) .hero, :global([data-theme='burgundy']) .phoneBanner { --hero-image: url('../../../assets/hero-building-burgundy.jpg'); }
+:global([data-theme='charcoal']) .hero, :global([data-theme='charcoal']) .phoneBanner { --hero-image: url('../../../assets/hero-building-charcoal.jpg'); }
+:global([data-theme='aubergine']) .hero, :global([data-theme='aubergine']) .phoneBanner { --hero-image: url('../../../assets/hero-building-aubergine.jpg'); }
+:global([data-theme='peacock']) .hero, :global([data-theme='peacock']) .phoneBanner { --hero-image: url('../../../assets/hero-building-peacock.jpg'); }
+:global([data-theme='espresso']) .hero, :global([data-theme='espresso']) .phoneBanner { --hero-image: url('../../../assets/hero-building-espresso.jpg'); }
+:global([data-theme='cognac']) .hero, :global([data-theme='cognac']) .phoneBanner { --hero-image: url('../../../assets/hero-building-cognac.jpg'); }
+:global([data-theme='olive']) .hero, :global([data-theme='olive']) .phoneBanner { --hero-image: url('../../../assets/hero-building-olive.jpg'); }
+:global([data-theme='indigo']) .hero, :global([data-theme='indigo']) .phoneBanner { --hero-image: url('../../../assets/hero-building-indigo.jpg'); }
 
 .top {
   display: flex;
@@ -121,6 +123,8 @@
   .hero {
     margin: 0 -16px;
     padding: calc(14px + env(safe-area-inset-top)) 16px 76px;
+  }
+  .hero {
     background:
       linear-gradient(0deg, var(--color-canvas) 0%, rgba(var(--canvas-rgb), 0.85) 16%, rgba(var(--canvas-rgb), 0) 42%),
       linear-gradient(180deg, rgba(var(--shade-rgb), 0.35) 0%, rgba(var(--shade-rgb), 0) 60%),
@@ -136,8 +140,52 @@
       var(--hero-fallback);
   }
 
-  .top { margin-bottom: 18px; }
+  /* The logo is shorter than a glass button: a fixed row height keeps titles level across pages */
+  .top { min-height: 44px; margin-bottom: 18px; }
   .title { font-size: 26px; }
+
+  /* Sits behind the page (the shell keeps the page positioned after it) */
+  .phoneBanner { position: absolute; inset: 0 0 auto; }
+  .phoneBannerArt {
+    height: var(--banner-height, var(--phone-hero-height));
+    padding: calc(14px + env(safe-area-inset-top)) 16px 0;
+    /* The photo is sized for the tallest banner, so changing height uncovers or hides its bottom
+       without zooming it; the fade to the page follows the bottom edge. Photos are 16:9. */
+    background:
+      linear-gradient(0deg, var(--color-canvas) 0%, rgba(var(--canvas-rgb), 0.85) 16%, rgba(var(--canvas-rgb), 0) 42%),
+      linear-gradient(180deg, rgba(var(--shade-rgb), 0.35) 0%, rgba(var(--shade-rgb), 0) 60%),
+      var(--hero-image) 72% 0 / max(100%, calc(var(--phone-hero-height) * 16 / 9)) auto no-repeat,
+      var(--hero-fallback);
+  }
+  .glide { transition: height 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+  /* Tab pages sit on the shell's PhoneBanner, so their hero only carries the page's own text and
+     controls. It stays out of the way of taps on the banner's logo and on content overlapping its fade. */
+  :global([data-bottom-nav]) .hero:not(.withBack) {
+    display: flex;
+    flex-direction: column;
+    background: none;
+    pointer-events: none;
+  }
+  /* Pages with a search share one height so the search never moves; the rest fit their own header */
+  :global([data-bottom-nav]) .hero:not(.withBack):has(> .searchRow) {
+    min-height: var(--phone-hero-height);
+    /* Below the search the page's own row (status chips, stat cards) begins: finish the banner's
+       fade before it, with eased stops so the photo dissolves behind the search instead of ending in a line */
+    background: linear-gradient(0deg,
+      var(--color-canvas) 0,
+      var(--color-canvas) 46px,
+      rgba(var(--canvas-rgb), 0.86) 58px,
+      rgba(var(--canvas-rgb), 0.62) 72px,
+      rgba(var(--canvas-rgb), 0.36) 88px,
+      rgba(var(--canvas-rgb), 0.15) 104px,
+      rgba(var(--canvas-rgb), 0) 124px);
+  }
+  :global([data-bottom-nav]) .hero:not(.withBack) > :not(.top),
+  :global([data-bottom-nav]) .hero:not(.withBack) .actions { pointer-events: auto; }
+  :global([data-bottom-nav]) .hero:not(.withBack) .brand { visibility: hidden; }
+  /* Pinned to the bottom of the banner: the same spot on every page that has one */
+  :global([data-bottom-nav]) .hero:not(.withBack) > .searchRow { margin-top: auto; padding-top: 18px; }
   .subtitle { font-size: var(--text-base); }
   .searchRow { margin-top: 18px; }
   .search, .squareBtn { height: 52px; }
