@@ -119,7 +119,7 @@ Deno.serve(async (req: Request) => {
         ...(mapLink && { other: { mapLink } }),
         raw_data: extracted,
       })
-      .select('id, slug')
+      .select('id, slug, short_id')
       .single()
 
     if (propertyError) throw new Error(`Property insert failed: ${propertyError.message}`)
@@ -165,7 +165,7 @@ Deno.serve(async (req: Request) => {
     }
 
     await makePreviewCard(supabaseUrl, serviceKey, property.id)
-    await sendText(session.sender_phone, listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain))
+    await sendText(session.sender_phone, listingUrl({ shortId: property.short_id, title: extracted.title }, APP_URL, SITE_DOMAIN, broker?.subdomain))
 
     // ── 8. Classify property images (fire-and-forget) ────────────────────────
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {

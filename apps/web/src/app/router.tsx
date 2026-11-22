@@ -31,7 +31,8 @@ const routes: RouteObject[] = [
   // Public property site
   { path: '/p/:slug', element: withSuspense(<PropertySitePage />) },
   { path: '/b/:brokerId', element: withSuspense(<BrokerSitePage />) },
-  { path: '/:order_id', element: withSuspense(<PropertySitePage />) },
+  // Current listing link: /<shortId>/<name>. A bare /<uuid> is an older link. Workspace routes like /properties/new are more specific and win.
+  { path: '/:shortId/:name?', element: withSuspense(<PropertySitePage />) },
 
   // Guest only
   { path: '/login', element: guestLogin },
@@ -71,6 +72,7 @@ const routes: RouteObject[] = [
 const brokerSiteRoutes: RouteObject[] = [
   { path: '/', element: withSuspense(<BrokerSitePage />) },
   { path: '/p/:slug', element: withSuspense(<PropertySitePage />) },
+  { path: '/:shortId/:name?', element: withSuspense(<PropertySitePage />) },
   { path: '*', element: <ToMainSite /> },
 ]
 

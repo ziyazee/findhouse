@@ -13,6 +13,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
 
   const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -23,6 +24,10 @@ export default function LoginPage() {
     }
     if (!isIndianMobile(phone)) {
       setError('Enter a valid 10-digit Indian mobile number.')
+      return false
+    }
+    if (!password) {
+      setError('Password is required.')
       return false
     }
     setError(null)
@@ -37,7 +42,7 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      await login({ phone: phone.trim() })
+      await login({ phone: phone.trim(), password })
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(
@@ -54,7 +59,7 @@ export default function LoginPage() {
     <AuthLayout>
       <div className={styles.formHeader}>
         <h1 className={styles.title}>Welcome back</h1>
-        <p className={styles.subtitle}>Sign in with your WhatsApp number.</p>
+        <p className={styles.subtitle}>Sign in with your WhatsApp number and password.</p>
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
@@ -84,6 +89,21 @@ export default function LoginPage() {
           />
           <p className={styles.phoneHint}>
             +91 Indian mobile number — the same number you use on WhatsApp.
+          </p>
+          <Input
+            label="Password"
+            type="password"
+            name="password"
+            placeholder="Your password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              if (error) setError(null)
+            }}
+            autoComplete="current-password"
+          />
+          <p className={styles.phoneHint}>
+            First time here? Choose a password (at least 8 characters) and it’s saved when you sign in.
           </p>
         </div>
 

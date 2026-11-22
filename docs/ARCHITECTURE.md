@@ -242,6 +242,12 @@ Each broker's public site is a subdomain of `findhouse.in`: `ravi-homes.findhous
 >
 > To try it locally, put `VITE_SITE_DOMAIN=localhost` in `.env.local` and open `http://<subdomain>.localhost:5173` (Chrome and Firefox resolve `*.localhost`; Safari doesn't). The workspace session is stored per address, so a broker is signed out on subdomains.
 
+### Password login and listing links
+
+- **Login (migration `016_password_login_and_short_ids.sql`, run after 015):** `findhouse.in` opens the login page. A broker signs in with their WhatsApp number and a password through the `broker_sign_in` function. Hashes (bcrypt) live in `broker_credentials`, which the anon key can't read. A broker with no password yet gets the one they type (8 characters or more) saved on first login. To reset a password, delete the broker's row in `broker_credentials`. This is still the C1 model: the session is kept in the browser and the database is still open to the anon key, so the password is not yet a real security boundary.
+- **Subdomain for every broker:** brokers are created from their first WhatsApp message, with no name. Migration 016 gives them `broker-<last 4 digits>` (made unique with -2, -3 …) until they pick a name in Settings → Public site.
+- **Listing links:** `<subdomain>.findhouse.in/<shortId>/<name>`, for example `ravi-homes.findhouse.in/k3f9x2ab/2-bhk-in-andheri`. `properties.short_id` is 8 characters, filled by a trigger. Only the short id finds the listing; the name is decoration, so renaming a listing never breaks a link. Older `/p/<slug>` and `/<uuid>` links still work. `listingPath` (`lib/siteUrls.ts`) and `listingUrl` in `process-submission` build the path; keep the two in step. `functions/[shortId]/[name].ts` adds the link-preview tags for the new path.
+
 ### WhatsApp free trial
 
 A new number gets one free listing; after that its messages are ignored. `whatsapp-webhook` never replies: the only messages to the broker come from `process-submission`. The rules are in `supabase/functions/_shared/conversation.ts` (`decide`, plus the ready text, tested in `conversation.test.ts` with `npm run test:functions`); the two dashboard bundles carry a copy, so change all three together.

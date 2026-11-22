@@ -20,6 +20,7 @@ export function makeProperty(overrides: Partial<Property> = {}): Property {
     brokerId: 'b1',
     sessionId: null,
     slug: 'two-bhk-abc123',
+    shortId: 'k3f9x2ab',
     title: '2BHK in Bandra',
     propertyType: 'apartment',
     listingType: 'rent',

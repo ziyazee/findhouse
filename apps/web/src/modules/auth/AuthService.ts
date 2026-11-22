@@ -1,5 +1,5 @@
 import type { AuthSession, LoginInput } from './auth.types'
-import { AuthError } from './auth.types'
+import { AuthError, PASSWORD_MIN } from './auth.types'
 import { normalizePhone } from './phone'
 import { supabase } from '@/lib/supabase'
 
@@ -27,20 +27,39 @@ export function brokerAccessError(status: string): string | null {
 }
 
 class PhoneAuthService implements IAuthService {
-  async login({ phone }: LoginInput): Promise<AuthSession> {
-    const { data, error } = await supabase
-      .from('brokers')
-      .select('id, phone, status')
-      .eq('phone', normalizePhone(phone))
-      .maybeSingle()
+  /**
+   * Checks the password on the server. A broker with no password yet (first login) gets the one they typed saved
+   * as their password, so this is also how an account is set up.
+   */
+  async login({ phone, password }: LoginInput): Promise<AuthSession> {
+    const { data, error } = await supabase.rpc('broker_sign_in', {
+      login_phone: normalizePhone(phone),
+      login_password: password,
+    })
 
     if (error) throw new AuthError('Couldn’t reach FindHouse. Check your connection and try again.')
-    if (!data) throw new AuthError('No broker account found for this phone number.')
-    const denied = brokerAccessError(data.status)
-    if (denied) throw new AuthError(denied)
+    const row = data?.[0]
+    if (!row) throw new AuthError('Couldn’t sign you in. Please try again.')
+
+    switch (row.outcome) {
+      case 'ok':
+      case 'password_set':
+        break
+      case 'no_account':
+        throw new AuthError('No broker account found for this phone number. Send a message to our WhatsApp number to create one.')
+      case 'wrong_password':
+        throw new AuthError('Wrong password. Try again.')
+      case 'weak_password':
+        throw new AuthError(`Choose a password of at least ${PASSWORD_MIN} characters.`)
+      case 'not_active':
+        throw new AuthError(brokerAccessError(row.status ?? '') ?? 'This account is inactive.')
+      default:
+        throw new AuthError('Couldn’t sign you in. Please try again.')
+    }
+    if (!row.id || !row.phone) throw new AuthError('Couldn’t sign you in. Please try again.')
 
     const session: AuthSession = {
-      user: { id: data.id, phone: data.phone, name: null, role: 'broker' },
+      user: { id: row.id, phone: row.phone, name: row.name, role: 'broker' },
     }
     this.save(session)
     return session

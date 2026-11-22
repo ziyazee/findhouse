@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { generateSlug, toProperty, toPropertyRow, type PropertyWithMediaRow } from './propertyMappers'
 
 const row: PropertyWithMediaRow = {
-  id: 'p1', broker_id: 'b1', session_id: null, slug: 'two-bhk-x1', title: '2BHK', property_type: 'apartment',
+  id: 'p1', broker_id: 'b1', session_id: null, slug: 'two-bhk-x1', short_id: 'k3f9x2ab', title: '2BHK', property_type: 'apartment',
   listing_type: 'rent', status: 'available', price: 45000, deposit: null, location: 'Bandra', locality: 'Bandra',
   bedrooms: 2, bathrooms: 1, balconies: null, built_up_area: 900, carpet_area: null, furnishing: null, floor: null,
   total_floors: null, parking: null, move_in_date: null, amenities: null, description: null, other: null,

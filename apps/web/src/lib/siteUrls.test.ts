@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { brokerSiteUrl, listingSiteUrl, mainOrigin, normalizeSubdomain, subdomainOf, subdomainProblem } from './siteUrls'
+import { brokerSiteUrl, listingPath, listingSiteUrl, mainOrigin, nameSlug, normalizeSubdomain, subdomainOf, subdomainProblem } from './siteUrls'
 
 const live = { protocol: 'https:', hostname: 'findhouse.in', port: '', domain: 'findhouse.in' }
 const onSite = { ...live, hostname: 'ravi-homes.findhouse.in' }
 const dev = { protocol: 'http:', hostname: 'localhost', port: '5173', domain: 'localhost' }
 const off = { ...live, domain: '' }
+const flat = { shortId: 'k3f9x2ab', title: '2 BHK in Andheri!' }
 
 describe('subdomains', () => {
   it('reads the broker from the host', () => {
@@ -23,9 +24,15 @@ describe('subdomains', () => {
     expect(brokerSiteUrl(dev, ravi)).toBe('http://ravi-homes.localhost:5173/')
     expect(brokerSiteUrl(live, { id: 'b1', subdomain: null })).toBe('https://findhouse.in/b/b1')
     expect(brokerSiteUrl(off, ravi)).toBe('https://findhouse.in/b/b1')
-    expect(listingSiteUrl(live, 'flat-x1', 'ravi-homes')).toBe('https://ravi-homes.findhouse.in/p/flat-x1')
-    expect(listingSiteUrl(live, 'flat-x1', null)).toBe('https://findhouse.in/p/flat-x1')
-    expect(listingSiteUrl(onSite, 'flat-x1', null)).toBe('https://ravi-homes.findhouse.in/p/flat-x1')
+    expect(listingSiteUrl(live, flat, 'ravi-homes')).toBe('https://ravi-homes.findhouse.in/k3f9x2ab/2-bhk-in-andheri')
+    expect(listingSiteUrl(live, flat, null)).toBe('https://findhouse.in/k3f9x2ab/2-bhk-in-andheri')
+    expect(listingSiteUrl(onSite, flat, null)).toBe('https://ravi-homes.findhouse.in/k3f9x2ab/2-bhk-in-andheri')
+  })
+
+  it('puts the short id and the name in the listing path', () => {
+    expect(listingPath(flat)).toBe('/k3f9x2ab/2-bhk-in-andheri')
+    expect(listingPath({ shortId: 'k3f9x2ab', title: '!!!' })).toBe('/k3f9x2ab')
+    expect(nameSlug('  Sea View — Flat  ')).toBe('sea-view-flat')
   })
 
   it('finds the main site from a broker subdomain', () => {

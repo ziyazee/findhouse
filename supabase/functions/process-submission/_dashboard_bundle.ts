@@ -147,10 +147,20 @@ function generateSlug(title: string): string {
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
 const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || undefined
 
-/** On the broker's subdomain when subdomains are on (SITE_DOMAIN) and they have one; otherwise the main site. */
-function listingUrl(slug: string, appUrl: string, siteDomain: string | undefined, subdomain: string | null | undefined): string {
-  if (siteDomain && subdomain) return `https://${subdomain}.${siteDomain}/p/${slug}`
-  return `${appUrl.replace(/\/+$/, '')}/p/${slug}`
+/** A listing's name as it appears in its link: "2 BHK in Andheri!" → "2-bhk-in-andheri". Decoration only. */
+function nameSlug(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '')
+}
+
+/**
+ * <broker>.<SITE_DOMAIN>/<shortId>/<name> when subdomains are on (SITE_DOMAIN) and the broker has one; otherwise the
+ * same path on the main site. Keep in step with listingPath in apps/web/src/lib/siteUrls.ts.
+ */
+function listingUrl(listing: { shortId: string; title: string }, appUrl: string, siteDomain: string | undefined, subdomain: string | null | undefined): string {
+  const name = nameSlug(listing.title)
+  const path = name ? `/${listing.shortId}/${name}` : `/${listing.shortId}`
+  if (siteDomain && subdomain) return `https://${subdomain}.${siteDomain}${path}`
+  return `${appUrl.replace(/\/+$/, '')}${path}`
 }
 
 /** WhatsApp wants the full international number as digits only (919876543210): no +, spaces or dashes. */
@@ -274,7 +284,7 @@ Deno.serve(async (req: Request) => {
         amenities: extracted.amenities, description: extracted.description,
         other: extracted.other ?? {}, raw_data: extracted,
       })
-      .select('id, slug')
+      .select('id, slug, short_id')
       .single()
 
     if (propertyError) throw new Error(`Property insert failed: ${propertyError.message}`)
@@ -303,7 +313,7 @@ Deno.serve(async (req: Request) => {
     }
 
     await makePreviewCard(supabaseUrl, serviceKey, property.id)
-    await sendText(session.sender_phone, listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain))
+    await sendText(session.sender_phone, listingUrl({ shortId: property.short_id, title: extracted.title }, APP_URL, SITE_DOMAIN, broker?.subdomain))
 
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {
       method: 'POST',

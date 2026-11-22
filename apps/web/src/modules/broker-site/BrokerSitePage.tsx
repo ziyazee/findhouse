@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { MotionConfig, motion } from 'framer-motion'
 import { Home, ImageOff, MapPin, Phone, Share2 } from 'lucide-react'
-import { brokerSiteUrl, currentSite, mainOrigin, siteSubdomain } from '@/lib/site'
+import { brokerSiteUrl, currentSite, listingPath, mainOrigin, siteSubdomain } from '@/lib/site'
 import { propertyService } from '@/modules/properties/PropertyService'
 import { propertyKeys } from '@/modules/properties/queryKeys'
 import { coverUrl, placeOf } from '@/modules/properties/listingStatus'
@@ -181,7 +181,7 @@ function ListingCard({ property: p }: { property: Property }) {
   const facts = cardFacts(p)
   return (
     <motion.li variants={rise}>
-      <Link className={styles.card} to={`/p/${p.slug}`}>
+      <Link className={styles.card} to={listingPath(p)}>
         <span className={styles.cardImage}>
           {img ? <img src={img} alt="" loading="lazy" /> : <ImageOff size={22} aria-hidden="true" />}
           <span className={styles.cardType}>{p.listingType === 'rent' ? 'For rent' : 'For sale'}</span>

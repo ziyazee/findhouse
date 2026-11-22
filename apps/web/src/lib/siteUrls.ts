@@ -1,6 +1,6 @@
 /**
  * Brokers' public sites live on subdomains of `VITE_SITE_DOMAIN`: ravi-homes.findhouse.in is a broker's page and
- * ravi-homes.findhouse.in/p/<slug> one of their listings. The main domain keeps the workspace and the older
+ * ravi-homes.findhouse.in/<shortId>/<name> one of their listings. The main domain keeps the workspace and the older
  * /b/:id and /p/:slug links. With no domain configured, every link stays on the current site.
  */
 
@@ -62,8 +62,29 @@ export function brokerSiteUrl(ctx: SiteContext, broker: { id: string; subdomain:
   return `${mainOrigin(ctx)}/b/${broker.id}`
 }
 
+/** A listing's name as it appears in its link: "2 BHK in Andheri!" → "2-bhk-in-andheri". Decoration only; the short id finds the listing. */
+export function nameSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/, '')
+}
+
+export interface ListingRef {
+  shortId: string
+  title: string
+}
+
+/** The path of a listing's page: /<shortId>/<name>. */
+export function listingPath(listing: ListingRef): string {
+  const name = nameSlug(listing.title)
+  return name ? `/${listing.shortId}/${name}` : `/${listing.shortId}`
+}
+
 /** A listing's public page, on its broker's subdomain when known. */
-export function listingSiteUrl(ctx: SiteContext, slug: string, subdomain: string | null): string {
-  if (ctx.domain && subdomain) return `${withPort(ctx, `${subdomain}.${ctx.domain}`)}/p/${slug}`
-  return `${withPort(ctx, ctx.hostname)}/p/${slug}`
+export function listingSiteUrl(ctx: SiteContext, listing: ListingRef, subdomain: string | null): string {
+  const origin = ctx.domain && subdomain ? withPort(ctx, `${subdomain}.${ctx.domain}`) : withPort(ctx, ctx.hostname)
+  return `${origin}${listingPath(listing)}`
 }

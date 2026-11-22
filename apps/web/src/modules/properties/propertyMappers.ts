@@ -46,6 +46,7 @@ export function toProperty(row: PropertyWithMediaRow): Property {
     brokerId: row.broker_id,
     sessionId: row.session_id,
     slug: row.slug,
+    shortId: row.short_id,
     title: row.title,
     propertyType: row.property_type,
     listingType: toListingType(row.listing_type),

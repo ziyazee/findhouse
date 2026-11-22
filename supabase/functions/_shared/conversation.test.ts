@@ -43,8 +43,10 @@ describe('decide', () => {
 
 describe('ready message', () => {
   it('links the listing on the broker subdomain when there is one, else the main site', () => {
-    expect(listingUrl('flat-x1', 'https://findhouse.in', 'findhouse.in', 'ravi')).toBe('https://ravi.findhouse.in/p/flat-x1')
-    expect(listingUrl('flat-x1', 'https://findhouse.in/', 'findhouse.in', null)).toBe('https://findhouse.in/p/flat-x1')
-    expect(listingUrl('flat-x1', 'https://findhouse.in', undefined, 'ravi')).toBe('https://findhouse.in/p/flat-x1')
+    const flat = { shortId: 'k3f9x2ab', title: '2 BHK in Andheri!' }
+    expect(listingUrl(flat, 'https://findhouse.in', 'findhouse.in', 'ravi')).toBe('https://ravi.findhouse.in/k3f9x2ab/2-bhk-in-andheri')
+    expect(listingUrl(flat, 'https://findhouse.in/', 'findhouse.in', null)).toBe('https://findhouse.in/k3f9x2ab/2-bhk-in-andheri')
+    expect(listingUrl(flat, 'https://findhouse.in', undefined, 'ravi')).toBe('https://findhouse.in/k3f9x2ab/2-bhk-in-andheri')
+    expect(listingUrl({ shortId: 'k3f9x2ab', title: '!!!' }, 'https://findhouse.in', 'findhouse.in', 'ravi')).toBe('https://ravi.findhouse.in/k3f9x2ab')
   })
 })

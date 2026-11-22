@@ -39,12 +39,18 @@ import {
 } from './listingContent'
 import styles from './PropertySitePage.module.css'
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export default function PropertySitePage() {
-  const { slug, order_id } = useParams<{ slug?: string; order_id?: string }>()
+  // /<shortId>/<name> is the current link; /p/<slug> and /<uuid> are older ones that still work.
+  const { shortId, slug } = useParams<{ shortId?: string; slug?: string }>()
+  const key = shortId ?? slug ?? ''
   const query = useQuery({
-    queryKey: propertyKeys.publicPage(slug ?? order_id ?? ''),
-    queryFn: () => (slug ? propertyService.getPropertyBySlug(slug) : propertyService.getProperty(order_id ?? '')),
-    enabled: Boolean(slug ?? order_id),
+    queryKey: propertyKeys.publicPage(key),
+    queryFn: () =>
+      shortId ? (UUID.test(shortId) ? propertyService.getProperty(shortId) : propertyService.getPropertyByShortId(shortId))
+      : propertyService.getPropertyBySlug(slug ?? ''),
+    enabled: Boolean(key),
   })
   const property = query.data
   const moving = useCanonicalSite(property)

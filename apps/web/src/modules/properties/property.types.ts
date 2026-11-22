@@ -19,6 +19,8 @@ export interface Property {
   brokerId: string | null
   sessionId: string | null
   slug: string
+  /** Short code used in the public link: /<shortId>/<name>. */
+  shortId: string
   title: string
   propertyType: string
   listingType: ListingType

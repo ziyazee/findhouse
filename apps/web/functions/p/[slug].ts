@@ -60,12 +60,12 @@ export function previewTags(p: Preview): string {
   return tags.join('\n')
 }
 
-async function loadListing(env: Env, slug: string): Promise<PreviewListing | null> {
+async function loadListing(env: Env, column: 'slug' | 'short_id', value: string): Promise<PreviewListing | null> {
   const key = env.VITE_SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_ANON_KEY
   if (!env.VITE_SUPABASE_URL || !key) return null
   const query = new URLSearchParams({
     select: 'title,listing_type,price,preview_image_path,property_media!property_media_property_id_fkey(storage_path,media_type,is_cover,display_order)',
-    slug: `eq.${slug}`,
+    [column]: `eq.${value}`,
     limit: '1',
   })
   const res = await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/properties?${query}`, {
@@ -76,11 +76,16 @@ async function loadListing(env: Env, slug: string): Promise<PreviewListing | nul
   return rows[0] ?? null
 }
 
-export const onRequestGet: PagesFunction<Env> = async (context) => {
+/** Serves the page with the listing's preview tags added, or the plain page when there's no such listing. */
+export async function servePreview(
+  context: Parameters<PagesFunction<Env>>[0],
+  column: 'slug' | 'short_id',
+  value: string,
+): Promise<Response> {
   const page = await context.next()
   if (!page.headers.get('content-type')?.includes('text/html')) return page
 
-  const listing = await loadListing(context.env, String(context.params.slug)).catch(() => null)
+  const listing = await loadListing(context.env, column, value).catch(() => null)
   if (!listing) return page
 
   const { origin, pathname } = new URL(context.request.url)
@@ -90,3 +95,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .on('head', { element: (el) => { el.append(previewTags(preview), { html: true }) } })
     .transform(page)
 }
+
+/** Older links: /p/<slug>. Current links (/<shortId>/<name>) are handled by functions/[shortId]/[name].ts. */
+export const onRequestGet: PagesFunction<Env> = (context) => servePreview(context, 'slug', String(context.params.slug))

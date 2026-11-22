@@ -7,6 +7,8 @@ export interface IPropertyService {
   /** Null when no such property is visible; throws on network or server errors. */
   getProperty(id: string): Promise<Property | null>
   getPropertyBySlug(slug: string): Promise<Property | null>
+  /** The listing behind a public link `/<shortId>/<name>`. */
+  getPropertyByShortId(shortId: string): Promise<Property | null>
   /** Phone number guests can call or WhatsApp; null unless the listing is live and its broker is active. */
   getListingContact(id: string): Promise<string | null>
   /** The agent's name for "Listed by …"; null when they haven't set one or the listing isn't live. */
@@ -52,6 +54,18 @@ class SupabasePropertyService implements IPropertyService {
       .from('properties')
       .select(PROPERTY_SELECT)
       .eq('slug', slug)
+      .returns<PropertyWithMediaRow[]>()
+      .maybeSingle()
+
+    if (error) throw new Error(error.message)
+    return data ? toProperty(data) : null
+  }
+
+  async getPropertyByShortId(shortId: string): Promise<Property | null> {
+    const { data, error } = await supabase
+      .from('properties')
+      .select(PROPERTY_SELECT)
+      .eq('short_id', shortId.toLowerCase())
       .returns<PropertyWithMediaRow[]>()
       .maybeSingle()
 

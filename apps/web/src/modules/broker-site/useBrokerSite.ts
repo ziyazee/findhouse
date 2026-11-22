@@ -23,7 +23,7 @@ export function useMySite() {
     profile,
     subdomain,
     pageUrl: user ? brokerSiteUrl(site, { id: user.id, subdomain }) : null,
-    listingUrl: (p: Pick<Property, 'slug'>) => listingSiteUrl(site, p.slug, subdomain),
+    listingUrl: (p: Pick<Property, 'shortId' | 'title'>) => listingSiteUrl(site, p, subdomain),
   }
 }
 

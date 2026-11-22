@@ -3,7 +3,7 @@ import { toast } from '@/shared/components/toastStore'
 import type { Property } from './property.types'
 
 /** The listing's page on this site. In the workspace, pass `useMySite().listingUrl(p)` for the broker's own site. */
-export const publicUrl = (p: Pick<Property, 'slug'>) => listingSiteUrl(currentSite(), p.slug, null)
+export const publicUrl = (p: Pick<Property, 'shortId' | 'title'>) => listingSiteUrl(currentSite(), p, null)
 
 async function copyLink(url: string) {
   try {
@@ -14,7 +14,7 @@ async function copyLink(url: string) {
   }
 }
 
-export const copyPropertyLink = (p: Pick<Property, 'slug'>, url = publicUrl(p)) => copyLink(url)
+export const copyPropertyLink = (p: Pick<Property, 'shortId' | 'title'>, url = publicUrl(p)) => copyLink(url)
 
 /** System share sheet where available, otherwise copies the link. */
 export async function shareLink(title: string, url: string) {
@@ -25,4 +25,4 @@ export async function shareLink(title: string, url: string) {
   await copyLink(url)
 }
 
-export const shareProperty = (p: Pick<Property, 'slug' | 'title'>, url = publicUrl(p)) => shareLink(p.title, url)
+export const shareProperty = (p: Pick<Property, 'shortId' | 'title'>, url = publicUrl(p)) => shareLink(p.title, url)

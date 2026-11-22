@@ -128,6 +128,7 @@ export type Database = {
           broker_id: string | null
           session_id: string | null
           slug: string
+          short_id: string
           title: string
           property_type: string
           listing_type: string
@@ -162,6 +163,7 @@ export type Database = {
           broker_id?: string | null
           session_id?: string | null
           slug: string
+          short_id?: string
           title: string
           property_type?: string
           listing_type?: string
@@ -196,6 +198,7 @@ export type Database = {
           broker_id?: string | null
           session_id?: string | null
           slug?: string
+          short_id?: string
           title?: string
           property_type?: string
           listing_type?: string
@@ -299,6 +302,10 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      broker_sign_in: {
+        Args: { login_phone: string; login_password: string }
+        Returns: { outcome: string; id: string | null; phone: string | null; status: string | null; name: string | null }[]
+      }
       get_listing_contact: {
         Args: { listing_id: string }
         Returns: string | null

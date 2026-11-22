@@ -33,8 +33,18 @@ export function decide(broker: BrokerState, kind: Classification, session: Sessi
   return ignore
 }
 
-/** On the broker's subdomain when subdomains are on (SITE_DOMAIN) and they have one; otherwise the main site. */
-export function listingUrl(slug: string, appUrl: string, siteDomain: string | undefined, subdomain: string | null | undefined): string {
-  if (siteDomain && subdomain) return `https://${subdomain}.${siteDomain}/p/${slug}`
-  return `${appUrl.replace(/\/+$/, '')}/p/${slug}`
+/** A listing's name as it appears in its link: "2 BHK in Andheri!" → "2-bhk-in-andheri". Decoration only. */
+function nameSlug(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '')
+}
+
+/**
+ * <broker>.<SITE_DOMAIN>/<shortId>/<name> when subdomains are on (SITE_DOMAIN) and the broker has one; otherwise the
+ * same path on the main site. Keep in step with listingPath in apps/web/src/lib/siteUrls.ts.
+ */
+export function listingUrl(listing: { shortId: string; title: string }, appUrl: string, siteDomain: string | undefined, subdomain: string | null | undefined): string {
+  const name = nameSlug(listing.title)
+  const path = name ? `/${listing.shortId}/${name}` : `/${listing.shortId}`
+  if (siteDomain && subdomain) return `https://${subdomain}.${siteDomain}${path}`
+  return `${appUrl.replace(/\/+$/, '')}${path}`
 }

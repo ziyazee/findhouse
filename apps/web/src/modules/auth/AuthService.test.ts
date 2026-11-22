@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthSession } from './auth.types'
 
-const db = vi.hoisted(() => ({ result: { data: null as unknown, error: null as unknown }, filter: '' }))
+const db = vi.hoisted(() => ({
+  result: { data: null as unknown, error: null as unknown },
+  filter: '',
+  rpc: { data: null as unknown, error: null as unknown },
+  rpcArgs: null as unknown,
+}))
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
+    rpc: async (_name: string, args: unknown) => {
+      db.rpcArgs = args
+      return db.rpc
+    },
     from: () => ({
       select: () => ({
         eq: (col: string, value: string) => {
@@ -42,26 +51,47 @@ describe('brokerAccessError', () => {
   })
 })
 
+const signIn = (outcome: string, extra: Record<string, unknown> = {}) => ({
+  data: [{ outcome, id: null, phone: null, status: null, name: null, ...extra }],
+  error: null,
+})
+const broker = { id: 'b1', phone: '919876543210', status: 'ACTIVE', name: 'Ravi' }
+
 describe('authService.login', () => {
-  it('looks the broker up by normalized phone and saves the session', async () => {
-    db.result = { data: { id: 'b1', phone: '919876543210', status: 'ACTIVE' }, error: null }
-    store.clear()
-    const session = await authService.login({ phone: '+91 98765 43210' })
-    expect(db.filter).toBe('phone=919876543210')
-    expect(session.user.id).toBe('b1')
+  beforeEach(() => store.clear())
+
+  it('sends the normalized phone and the password, and saves the session', async () => {
+    db.rpc = signIn('ok', broker)
+    const session = await authService.login({ phone: '+91 98765 43210', password: 'hunter2hunter2' })
+    expect(db.rpcArgs).toEqual({ login_phone: '919876543210', login_password: 'hunter2hunter2' })
+    expect(session.user).toEqual({ id: 'b1', phone: '919876543210', name: 'Ravi', role: 'broker' })
     expect(authService.getStoredSession()).toEqual(session)
   })
 
+  it('signs in on first login, when the password is saved', async () => {
+    db.rpc = signIn('password_set', broker)
+    await expect(authService.login({ phone: '9876543210', password: 'brand-new-pass' })).resolves.toBeTruthy()
+  })
+
+  it.each([
+    ['wrong_password', /wrong password/i],
+    ['weak_password', /at least 8/],
+    ['no_account', /no broker account/i],
+  ])('refuses %s without saving a session', async (outcome, message) => {
+    db.rpc = signIn(outcome)
+    await expect(authService.login({ phone: '9876543210', password: 'x' })).rejects.toThrow(message)
+    expect(authService.getStoredSession()).toBeNull()
+  })
+
   it('refuses inactive or blocked brokers', async () => {
-    db.result = { data: { id: 'b1', phone: '919876543210', status: 'BLOCKED' }, error: null }
-    store.clear()
-    await expect(authService.login({ phone: '9876543210' })).rejects.toThrow(/blocked/)
+    db.rpc = signIn('not_active', { status: 'BLOCKED' })
+    await expect(authService.login({ phone: '9876543210', password: 'whatever-pass' })).rejects.toThrow(/blocked/)
     expect(authService.getStoredSession()).toBeNull()
   })
 
   it('reports a connection problem instead of "no account"', async () => {
-    db.result = { data: null, error: { message: 'fetch failed' } }
-    await expect(authService.login({ phone: '9876543210' })).rejects.toThrow(/reach FindHouse/)
+    db.rpc = { data: null, error: { message: 'fetch failed' } }
+    await expect(authService.login({ phone: '9876543210', password: 'whatever-pass' })).rejects.toThrow(/reach FindHouse/)
   })
 })
 
