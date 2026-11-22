@@ -15,6 +15,7 @@ export interface PreviewListing {
   title: string | null
   listing_type: string | null
   price: number | null
+  preview_image_path?: string | null
   property_media: Array<{ storage_path: string | null; media_type: string; is_cover: boolean | null; display_order: number | null }> | null
 }
 
@@ -22,10 +23,15 @@ export interface Preview {
   title: string
   description: string
   image: string | null
+  /** The image is a made card, whose size is known. */
+  card?: boolean
   url?: string
 }
 
-/** The listing name as the title and only the price ("₹47,000 a month") under it. */
+/**
+ * The listing name as the title and only the price ("₹47,000 a month") under it. The image is the card the
+ * preview-card edge function made (cover photo with name and price on it), else the cover photo.
+ */
 export function listingPreview(listing: PreviewListing, mediaBaseUrl: string): Preview {
   const rent = listing.listing_type === 'rent'
   const description = listing.price ? (rent ? `${inr(listing.price)} a month` : rupeesInWords(listing.price)) : ''
@@ -33,9 +39,10 @@ export function listingPreview(listing: PreviewListing, mediaBaseUrl: string): P
   const photos = (listing.property_media ?? [])
     .filter((m) => m.media_type !== 'video' && m.storage_path)
     .sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || (a.display_order ?? 0) - (b.display_order ?? 0))
-  const image = photos[0] && mediaBaseUrl ? `${mediaBaseUrl.replace(/\/+$/, '')}/${photos[0].storage_path}` : null
+  const path = listing.preview_image_path || photos[0]?.storage_path
+  const image = path && mediaBaseUrl ? `${mediaBaseUrl.replace(/\/+$/, '')}/${path}` : null
 
-  return { title: listing.title || 'Property on FindHouse', description, image }
+  return { title: listing.title || 'Property on FindHouse', description, image, card: Boolean(listing.preview_image_path) }
 }
 
 const escape = (s: string) =>
@@ -48,6 +55,7 @@ export function previewTags(p: Preview): string {
     ['og:title', p.title],
     ...(p.description ? [['og:description', p.description]] : []),
     ...(p.image ? [['og:image', p.image]] : []),
+    ...(p.image && p.card ? [['og:image:width', '1200'], ['og:image:height', '630']] : []),
     ...(p.url ? [['og:url', p.url]] : []),
   ].map(([property, content]) => `<meta property="${property}" content="${escape(content)}" />`)
   if (p.description) tags.push(`<meta name="description" content="${escape(p.description)}" />`)
@@ -59,7 +67,7 @@ async function loadListing(env: Env, slug: string): Promise<PreviewListing | nul
   const key = env.VITE_SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_ANON_KEY
   if (!env.VITE_SUPABASE_URL || !key) return null
   const query = new URLSearchParams({
-    select: 'title,listing_type,price,property_media!property_media_property_id_fkey(storage_path,media_type,is_cover,display_order)',
+    select: 'title,listing_type,price,preview_image_path,property_media!property_media_property_id_fkey(storage_path,media_type,is_cover,display_order)',
     slug: `eq.${slug}`,
     limit: '1',
   })

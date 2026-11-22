@@ -187,6 +187,17 @@ async function sendText(phone: string, body: string): Promise<void> {
   console.log(`[process-submission] WhatsApp accepted the reply to ${to}: ${answer}`)
 }
 
+/** Before the link is sent, so WhatsApp finds the card. If it fails the link still goes; the preview shows the cover photo. */
+async function makePreviewCard(supabaseUrl: string, serviceKey: string, propertyId: string): Promise<void> {
+  const res = await fetch(`${supabaseUrl}/functions/v1/preview-card`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+    body: JSON.stringify({ propertyId }),
+    signal: AbortSignal.timeout(25_000),
+  }).catch((err) => { console.error('[process-submission] preview-card failed:', err); return null })
+  if (res && !res.ok) console.error(`[process-submission] preview-card answered ${res.status}: ${await res.text()}`)
+}
+
 async function loadBroker(brokerId: string | null): Promise<{ plan: string | null; subdomain: string | null } | null> {
   if (!brokerId) return null
   const { data } = await db.from('brokers').select('plan, subdomain').eq('id', brokerId).maybeSingle()
@@ -291,6 +302,7 @@ Deno.serve(async (req: Request) => {
       if (trialError) console.error(`[process-submission] Could not mark trial used: ${trialError.message}`)
     }
 
+    await makePreviewCard(supabaseUrl, serviceKey, property.id)
     await sendText(session.sender_phone, listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain))
 
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {
