@@ -23,14 +23,12 @@ export interface Preview {
   title: string
   description: string
   image: string | null
-  /** The image is a made card, whose size is known. */
-  card?: boolean
   url?: string
 }
 
 /**
- * The listing name as the title and only the price ("₹47,000 a month") under it. The image is the card the
- * preview-card edge function made (cover photo with name and price on it), else the cover photo.
+ * The listing name as the title and only the price ("₹47,000 a month") under it. The image is the small cover
+ * photo the preview-card edge function made, else the cover photo itself.
  */
 export function listingPreview(listing: PreviewListing, mediaBaseUrl: string): Preview {
   const rent = listing.listing_type === 'rent'
@@ -42,7 +40,7 @@ export function listingPreview(listing: PreviewListing, mediaBaseUrl: string): P
   const path = listing.preview_image_path || photos[0]?.storage_path
   const image = path && mediaBaseUrl ? `${mediaBaseUrl.replace(/\/+$/, '')}/${path}` : null
 
-  return { title: listing.title || 'Property on FindHouse', description, image, card: Boolean(listing.preview_image_path) }
+  return { title: listing.title || 'Property on FindHouse', description, image }
 }
 
 const escape = (s: string) =>
@@ -55,7 +53,6 @@ export function previewTags(p: Preview): string {
     ['og:title', p.title],
     ...(p.description ? [['og:description', p.description]] : []),
     ...(p.image ? [['og:image', p.image]] : []),
-    ...(p.image && p.card ? [['og:image:width', '1200'], ['og:image:height', '630']] : []),
     ...(p.url ? [['og:url', p.url]] : []),
   ].map(([property, content]) => `<meta property="${property}" content="${escape(content)}" />`)
   if (p.description) tags.push(`<meta name="description" content="${escape(p.description)}" />`)

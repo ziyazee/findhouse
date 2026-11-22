@@ -92,7 +92,7 @@ async function extractPropertyData(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: 'claude-haiku-5-5', max_tokens: 1024, system: EXTRACTION_PROMPT,
+      model: 'claude-haiku-5-5', max_tokens: 4096, system: EXTRACTION_PROMPT,
       messages: [{ role: 'user', content: contentParts }],
     }),
   })

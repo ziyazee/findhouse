@@ -2,77 +2,37 @@
 // preview-card — makes a listing's WhatsApp link preview image
 // Self-contained (no imports from _shared): paste this whole file into the Supabase Dashboard editor.
 //
-// POST { propertyId } → draws the cover photo with a dark strip along the bottom holding the listing name and
-// price, saves it to R2 as previews/<slug>-<time>.jpg and stores that path in properties.preview_image_path.
+// POST { propertyId } → crops the cover photo to 320x168 and compresses it to about 5 KB, saves it to R2 as
+// previews/<slug>-<time>.jpg and stores that path in properties.preview_image_path. No text on it: WhatsApp
+// shows the name and price itself, and text is unreadable once WhatsApp shrinks the image to a thumbnail.
 // The listing page's preview tags (apps/web/functions/p/[slug].ts) point WhatsApp at it.
 // ============================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
 
-// WhatsApp shows a large preview for a 1.91:1 image under 600 KB.
-const WIDTH = 1200
-const HEIGHT = 630
-const STRIP = 200
-const PAD = 48
-const NO_PHOTO_BACKGROUND = 0x1f2937ff
+// Meta asks for at least 300 px wide, 4:1 or narrower, under 600 KB. Tiny on purpose: aimed at 5 KB.
+const WIDTH = 320
+const HEIGHT = 168
+const TARGET_BYTES = 5_000
+const QUALITIES = [60, 50, 40, 32, 25, 18]
 
-// Poppins has the ₹ sign.
-const FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins'
+// ── Image ─────────────────────────────────────────────────────────────────────
 
-// ── Card ──────────────────────────────────────────────────────────────────────
-
-/** "₹47,000 a month" for rentals, "₹85 lakh" / "₹1.2 crore" for sales — the same words as the listing page. */
-export function priceText(listingType: string | null, price: number | null): string | null {
-  if (!price) return null
-  if (listingType === 'rent') return `₹${Math.round(price).toLocaleString('en-IN')} a month`
-  const round2 = (n: number) => Number(n.toFixed(2)).toString()
-  if (price >= 1e7) return `₹${round2(price / 1e7)} crore`
-  if (price >= 1e5) return `₹${round2(price / 1e5)} lakh`
-  return `₹${price.toLocaleString('en-IN')}`
-}
-
-export interface Fonts { name: Uint8Array; price: Uint8Array }
-
-/** One line of text, cut with "…" so it fits `maxWidth`. */
-async function textLine(font: Uint8Array, size: number, text: string, maxWidth: number): Promise<Image> {
-  let shown = text
-  let line = await Image.renderText(font, size, shown, 0xffffffff)
-  while (line.width > maxWidth && shown.length > 1) {
-    shown = shown.slice(0, -1)
-    line = await Image.renderText(font, size, `${shown.trimEnd()}…`, 0xffffffff)
-  }
-  return line
-}
-
-/** The card as a JPEG. Without a photo (or one that can't be read) the strip sits on a plain background. */
-export async function drawCard(photo: Uint8Array | null, name: string, price: string | null, fonts: Fonts): Promise<Uint8Array<ArrayBuffer>> {
+/**
+ * The photo cropped to the preview shape as a small JPEG, at the best quality that fits TARGET_BYTES (the lowest
+ * quality if none does). Null when there's no photo or it can't be read.
+ */
+export async function resizePhoto(photo: Uint8Array | null): Promise<Uint8Array<ArrayBuffer> | null> {
   const decoded = photo ? await Image.decode(photo).catch(() => null) : null
-  const card = decoded instanceof Image ? decoded.cover(WIDTH, HEIGHT) : new Image(WIDTH, HEIGHT).fill(NO_PHOTO_BACKGROUND)
-  card.composite(new Image(WIDTH, STRIP).fill(0x000000b8), 0, HEIGHT - STRIP)
-
-  const lines = [await textLine(fonts.name, 52, name, WIDTH - PAD * 2)]
-  if (price) lines.push(await textLine(fonts.price, 64, price, WIDTH - PAD * 2))
-  let y = HEIGHT - STRIP + Math.round((STRIP - lines.reduce((h, l) => h + l.height, 0)) / 2)
-  for (const line of lines) {
-    card.composite(line, PAD, y)
-    y += line.height
+  if (!(decoded instanceof Image)) return null
+  const small = decoded.cover(WIDTH, HEIGHT)
+  let jpeg = new Uint8Array(0)
+  for (const quality of QUALITIES) {
+    jpeg = new Uint8Array(await small.encodeJPEG(quality))
+    if (jpeg.length <= TARGET_BYTES) break
   }
-  return new Uint8Array(await card.encodeJPEG(82))
-}
-
-let fontsLoading: Promise<Fonts> | null = null
-
-function loadFonts(): Promise<Fonts> {
-  const font = async (file: string) => {
-    const res = await fetch(`${FONT_URL}/${file}`)
-    if (!res.ok) throw new Error(`Could not load font ${file}: ${res.status}`)
-    return new Uint8Array(await res.arrayBuffer())
-  }
-  fontsLoading ??= Promise.all([font('Poppins-SemiBold.ttf'), font('Poppins-Bold.ttf')])
-    .then(([name, price]) => ({ name, price }))
-    .catch((err) => { fontsLoading = null; throw err })
-  return fontsLoading
+  return jpeg as Uint8Array<ArrayBuffer>
 }
 
 // ── R2 upload (same signing as whatsapp-webhook) ──────────────────────────────
@@ -120,10 +80,7 @@ async function uploadToR2(key: string, body: Bytes, contentType: string): Promis
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 interface Listing {
-  title: string | null
   slug: string
-  listing_type: string | null
-  price: number | null
   property_media: Array<{ storage_path: string | null; media_type: string; is_cover: boolean | null; display_order: number | null }> | null
 }
 
@@ -149,7 +106,7 @@ Deno.serve(async (req: Request) => {
     const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const { data: listing, error } = await db
       .from('properties')
-      .select('title, slug, listing_type, price, property_media!property_media_property_id_fkey(storage_path, media_type, is_cover, display_order)')
+      .select('slug, property_media!property_media_property_id_fkey(storage_path, media_type, is_cover, display_order)')
       .eq('id', propertyId)
       .returns<Listing[]>()
       .maybeSingle()
@@ -160,15 +117,18 @@ Deno.serve(async (req: Request) => {
     const cover = coverPath(listing)
     const photoRes = cover && mediaBase ? await fetch(`${mediaBase}/${cover}`).catch(() => null) : null
     const photo = photoRes?.ok ? new Uint8Array(await photoRes.arrayBuffer()) : null
-    if (cover && !photo) console.warn(`[preview-card] Could not fetch the cover photo ${cover} — drawing the card without it`)
-
-    const jpeg = await drawCard(photo, listing.title || 'Property on FindHouse', priceText(listing.listing_type, listing.price), await loadFonts())
+    const jpeg = await resizePhoto(photo)
+    if (!jpeg) {
+      // The listing page falls back to the cover photo itself.
+      console.warn(`[preview-card] No usable cover photo for ${listing.slug} (${cover ?? 'none'}) — no preview image made`)
+      return new Response(JSON.stringify({ ok: true, path: null }), { headers: { 'Content-Type': 'application/json' } })
+    }
 
     // A new name each time, so WhatsApp and the CDN never show an older card.
     const key = `previews/${listing.slug}-${Date.now().toString(36)}.jpg`
     await uploadToR2(key, jpeg, 'image/jpeg')
     const { error: saveError } = await db.from('properties').update({ preview_image_path: key }).eq('id', propertyId)
-    if (saveError) throw new Error(`Could not save the card on the listing: ${saveError.message}`)
+    if (saveError) throw new Error(`Could not save the preview image on the listing: ${saveError.message}`)
 
     console.log(`[preview-card] Made ${key} (${jpeg.length} bytes) for ${listing.slug}`)
     return new Response(JSON.stringify({ ok: true, path: key }), { headers: { 'Content-Type': 'application/json' } })

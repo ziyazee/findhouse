@@ -18,14 +18,13 @@ describe('listing preview', () => {
       title: 'Spacious 1BHK at SJR Palaza City',
       description: '₹25,000 a month',
       image: 'https://media.findhouse.in/submissions/s/1.jpg',
-      card: false,
     })
   })
 
-  it('shows the card the edge function made, with its size', () => {
+  it('shows the preview image the edge function made', () => {
     const p = listingPreview({ ...listing, preview_image_path: 'previews/flat-x1-abc.jpg' }, 'https://m')
     expect(p.image).toBe('https://m/previews/flat-x1-abc.jpg')
-    expect(previewTags(p)).toContain('<meta property="og:image:width" content="1200" />')
+    expect(previewTags(p)).toContain('<meta property="og:image" content="https://m/previews/flat-x1-abc.jpg" />')
   })
 
   it('words a sale price, and has no photo when none was sent', () => {
