@@ -85,12 +85,19 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
     'Content-Type': 'application/json',
   }
   const db = (path: string, init: RequestInit = {}) => fetch(`${rest}/${path}`, { ...init, headers: { ...headers, ...init.headers } })
-  const failed = () => json({ error: 'The database request failed. Try again.' }, 502)
+  // Only reachable with the admin secret, so it's safe to say what the database answered.
+  const failed = async (res?: Response) => {
+    const detail = res ? await res.text().catch(() => '') : ''
+    let reason = detail
+    try { reason = (JSON.parse(detail) as { message?: string }).message ?? detail } catch { /* not JSON */ }
+    console.error(`[admin] database request failed: ${res?.status ?? 'no response'} ${detail}`)
+    return json({ error: `The database request failed${res ? ` (${res.status}${reason ? `: ${reason.slice(0, 200)}` : ''})` : ''}.` }, 500)
+  }
 
   try {
     if (request.method === 'GET') {
       const res = await db('brokers?select=id,phone,name,subdomain,status,plan,created_at,broker_credentials(broker_id)&order=created_at.desc')
-      if (!res.ok) return failed()
+      if (!res.ok) return failed(res)
       return json({ brokers: ((await res.json()) as BrokerRow[]).map(toAdminBroker) })
     }
 
@@ -99,7 +106,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
       if (!phone) return json({ error: 'Enter a valid 10-digit Indian mobile number.' }, 400)
       const res = await db('brokers', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ phone, status: 'ACTIVE' }) })
       if (res.status === 409) return json({ error: 'That number has already been added.' }, 409)
-      if (!res.ok) return failed()
+      if (!res.ok) return failed(res)
       return json({ phone }, 201)
     }
 
@@ -107,7 +114,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
       const body = (await request.json().catch(() => null)) as { id?: unknown; status?: unknown } | null
       if (typeof body?.id !== 'string' || !STATUSES.includes(body.status as BrokerStatus)) return json({ error: 'Invalid request.' }, 400)
       const res = await db(`brokers?id=eq.${encodeURIComponent(body.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: body.status }) })
-      if (!res.ok) return failed()
+      if (!res.ok) return failed(res)
       return json({ ok: true })
     }
 
@@ -115,7 +122,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
       const id = new URL(request.url).searchParams.get('id')
       if (!id) return json({ error: 'Invalid request.' }, 400)
       const found = await db(`brokers?select=id,broker_credentials(broker_id)&id=eq.${encodeURIComponent(id)}`)
-      if (!found.ok) return failed()
+      if (!found.ok) return failed(found)
       const [row] = (await found.json()) as Pick<BrokerRow, 'id' | 'broker_credentials'>[]
       if (!row) return json({ error: 'No such broker.' }, 404)
       if (toAdminBroker({ ...row, phone: '', name: null, subdomain: null, status: '', plan: '', created_at: '' }).registered) {
@@ -127,7 +134,8 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     return json({ error: 'Method not allowed.' }, 405)
-  } catch {
-    return failed()
+  } catch (err) {
+    console.error('[admin] request threw', err)
+    return json({ error: `Couldn’t reach the database: ${err instanceof Error ? err.message : 'unknown error'}.` }, 500)
   }
 }
