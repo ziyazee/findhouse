@@ -14,7 +14,7 @@ const db = createClient(
 )
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
-const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || undefined
+const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || 'findhouse.in'
 
 /** WhatsApp draws the link preview card from the listing page's preview tags (apps/web/functions/p/[slug].ts). */
 async function sendText(to: string, body: string): Promise<void> {

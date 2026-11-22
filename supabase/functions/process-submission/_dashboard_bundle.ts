@@ -145,7 +145,7 @@ function generateSlug(title: string): string {
 // ── Ready message (copy of listingUrl in _shared/conversation.ts) ──
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
-const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || undefined
+const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || 'findhouse.in'
 
 /** A listing's name as it appears in its link: "2 BHK in Andheri!" → "2-bhk-in-andheri". Decoration only. */
 function nameSlug(title: string): string {

@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.broker_credentials (
 );
 ALTER TABLE public.broker_credentials ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.broker_credentials FROM anon, authenticated;
+-- The admin page (a server-side function using the service key) reads it to show who has registered.
+GRANT ALL ON public.broker_credentials TO service_role;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
