@@ -4,7 +4,7 @@ import { Menu, type MenuItem } from '@/shared/components/Menu'
 import { Skeleton } from '@/shared/components/Card'
 import { coverUrl, formatDate, formatRent, placeOf } from '../listingStatus'
 import { ListingStatusBadge } from './ListingStatusBadge'
-import { VisibilityBadge } from './VisibilityBadge'
+import { VisibilityToggle } from './VisibilityToggle'
 import { shareProperty } from '../shareProperty'
 import { useMySite } from '@/modules/broker-site/useBrokerSite'
 import type { Property } from '../property.types'
@@ -35,7 +35,7 @@ export function PropertyCard({ property: p, menuItems, compact = false, shareOnP
             <span>No photos yet</span>
           </div>
         )}
-        <div className={styles.badge}><ListingStatusBadge property={p} /><VisibilityBadge property={p} /></div>
+        <div className={styles.badge}><ListingStatusBadge property={p} /><VisibilityToggle property={p} /></div>
         {photos > 0 && (
           <span className={styles.photoCount}>
             <Images size={12} aria-hidden="true" />

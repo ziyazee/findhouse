@@ -75,7 +75,7 @@ BEGIN
 END;
 $$;
 REVOKE ALL ON FUNCTION public.broker_register_check(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.broker_register_check(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.broker_register_check(text) TO anon, authenticated, service_role;
 
 -- Called only by the register function (service key), after it has created the auth user. Links it to the broker
 -- and saves the name and the site name made from it. Outcomes: 'registered', or one of the check results above, or

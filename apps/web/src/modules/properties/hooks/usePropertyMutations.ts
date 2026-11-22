@@ -43,10 +43,28 @@ export function useSetPropertyStatus() {
   })
 }
 
+/** Flips public/private on screen straight away (lists and the property page) and puts it back if saving fails. */
 export function useSetPropertyVisibility() {
+  const qc = useQueryClient()
   const refresh = useRefreshProperties()
   return useMutation({
     mutationFn: ({ id, isPublic }: { id: string; isPublic: boolean }) => propertyService.updateProperty(id, { isPublic }),
+    onMutate: async ({ id, isPublic }) => {
+      await Promise.all([
+        qc.cancelQueries({ queryKey: propertyKeys.lists }),
+        qc.cancelQueries({ queryKey: propertyKeys.detail(id) }),
+      ])
+      const lists = qc.getQueriesData<Property[]>({ queryKey: propertyKeys.lists })
+      const detail = qc.getQueryData<Property>(propertyKeys.detail(id))
+      qc.setQueriesData<Property[]>({ queryKey: propertyKeys.lists }, (old) =>
+        old?.map((p) => (p.id === id ? { ...p, isPublic } : p)))
+      if (detail) qc.setQueryData<Property>(propertyKeys.detail(id), { ...detail, isPublic })
+      return { lists, detail }
+    },
+    onError: (_err, { id }, context) => {
+      context?.lists.forEach(([key, data]) => qc.setQueryData(key, data))
+      if (context?.detail) qc.setQueryData(propertyKeys.detail(id), context.detail)
+    },
     onSuccess: (updated) => refresh(updated),
   })
 }
