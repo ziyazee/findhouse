@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import { MotionConfig, motion } from 'framer-motion'
 import { Home, ImageOff, MapPin, Phone, Share2 } from 'lucide-react'
 import { brokerSiteUrl, currentSite, listingPath, mainOrigin, siteSubdomain } from '@/lib/site'
-import { propertyService } from '@/modules/properties/PropertyService'
 import { propertyKeys } from '@/modules/properties/queryKeys'
 import { coverUrl, placeOf } from '@/modules/properties/listingStatus'
 import { shareLink } from '@/modules/properties/shareProperty'
@@ -26,17 +25,15 @@ import styles from './BrokerSitePage.module.css'
 export default function BrokerSitePage() {
   const { brokerId } = useParams<{ brokerId?: string }>()
   const ref = brokerId ? { id: brokerId } : siteSubdomain ? { subdomain: siteSubdomain } : null
-  const profile = useQuery({
-    queryKey: propertyKeys.brokerProfile(brokerId ?? `@${siteSubdomain ?? ''}`),
-    queryFn: () => brokerService.getProfile(ref!),
+  // The broker and their listings come back together, so the page isn't waiting on two requests in a row.
+  const site = useQuery({
+    queryKey: propertyKeys.brokerSite(brokerId ?? `@${siteSubdomain ?? ''}`),
+    queryFn: () => brokerService.getSite(ref!),
     enabled: Boolean(ref),
   })
-  const broker = profile.data
-  const listings = useQuery({
-    queryKey: propertyKeys.brokerListings(broker?.id ?? ''),
-    queryFn: () => propertyService.getBrokerListings(broker!.id),
-    enabled: Boolean(broker?.id),
-  })
+  const profile = site
+  const broker = site.data?.profile
+  const listings = { data: site.data?.listings, isLoading: site.isLoading, isError: site.isError, refetch: site.refetch }
 
   // The older /b/:id address moves to the broker's own subdomain once subdomains are on.
   const home = broker ? brokerSiteUrl(currentSite(), broker) : null

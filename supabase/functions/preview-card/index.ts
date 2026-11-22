@@ -2,7 +2,8 @@
 // preview-card — makes a listing's WhatsApp link preview image
 // Self-contained (no imports from _shared): paste this whole file into the Supabase Dashboard editor.
 //
-// POST { propertyId } → crops the cover photo to 320x168 and compresses it to about 5 KB, saves it to R2 as
+// POST { propertyId } → crops the cover photo to 1200x630 (the size WhatsApp shows as a large, sharp card) and saves it
+// as a JPEG under about 300 KB, saves it to R2 as
 // previews/<slug>-<time>.jpg and stores that path in properties.preview_image_path. No text on it: WhatsApp
 // shows the name and price itself, and text is unreadable once WhatsApp shrinks the image to a thumbnail.
 // The listing page's preview tags (apps/web/functions/p/[slug].ts) point WhatsApp at it.
@@ -11,11 +12,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
 
-// Meta asks for at least 300 px wide, 4:1 or narrower, under 600 KB. Tiny on purpose: aimed at 5 KB.
-const WIDTH = 320
-const HEIGHT = 168
-const TARGET_BYTES = 5_000
-const QUALITIES = [60, 50, 40, 32, 25, 18]
+// WhatsApp shows a large preview for a 1.91:1 image, and loads it reliably when it is under about 300 KB (the hard
+// limit is 600 KB). So: full 1200x630, at the best quality that fits.
+const WIDTH = 1200
+const HEIGHT = 630
+const TARGET_BYTES = 300_000
+const QUALITIES = [86, 78, 70, 60, 50, 40]
 
 // ── Image ─────────────────────────────────────────────────────────────────────
 

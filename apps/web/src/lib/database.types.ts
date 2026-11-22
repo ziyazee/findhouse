@@ -306,6 +306,10 @@ export type Database = {
         Args: { check_phone: string }
         Returns: string
       }
+      get_broker_site: {
+        Args: { page_broker_id?: string; page_subdomain?: string }
+        Returns: unknown
+      }
       broker_me: {
         Args: Record<string, never>
         Returns: { id: string; phone: string; name: string | null; status: string; subdomain: string | null }[]

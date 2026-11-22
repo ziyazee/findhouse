@@ -9,6 +9,8 @@ export const propertyKeys = {
   contact: (id: string) => [...propertyKeys.all, 'contact', id] as const,
   agentName: (id: string) => [...propertyKeys.all, 'agentName', id] as const,
   /** A broker's public page: their public listings. */
+  /** A broker's whole public page (profile and listings) in one request. */
+  brokerSite: (ref: string) => [...propertyKeys.all, 'brokerSite', ref] as const,
   brokerListings: (brokerId: string) => [...propertyKeys.all, 'broker', brokerId] as const,
   brokerProfile: (brokerId: string) => [...propertyKeys.all, 'brokerProfile', brokerId] as const,
 }

@@ -53,3 +53,21 @@ describe('brokerService.setSubdomain', () => {
     expect(await brokerService.setSubdomain('ravi-homes')).toBe('ravi-homes')
   })
 })
+
+describe('brokerService.getSite', () => {
+  it('returns the broker and their listings from one call', async () => {
+    db.result = { data: { id: 'b1', name: ' Ravi ', phone: '919876543210', subdomain: 'ravi', listings: [] }, error: null }
+    expect(await brokerService.getSite({ subdomain: 'ravi' })).toEqual({
+      profile: { id: 'b1', name: 'Ravi', phone: '919876543210', subdomain: 'ravi' },
+      listings: [],
+    })
+    expect(db.call).toEqual({ fn: 'get_broker_site', args: { page_subdomain: 'ravi' } })
+  })
+
+  it('reads no broker, or an id that is not a UUID, as not found', async () => {
+    db.result = { data: null, error: null }
+    expect(await brokerService.getSite({ id: 'b1' })).toBeNull()
+    db.result = { data: null, error: { code: '22P02', message: 'invalid input syntax' } }
+    expect(await brokerService.getSite({ id: 'nope' })).toBeNull()
+  })
+})
