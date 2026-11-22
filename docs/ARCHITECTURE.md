@@ -231,24 +231,25 @@ Each broker's public site is a subdomain of `findhouse.in`: `ravi-homes.findhous
   - `/b/:id` moves to the broker's subdomain;
   - a main-site listing link moves to its broker's subdomain;
   - a listing opened on another broker's subdomain moves to the main site, so listing links survive a rename. Links to the old broker page don't.
-- **Notification:** `process-submission` sends the "ready" message with the listing link itself, on the broker's subdomain when its `SITE_DOMAIN` secret is set. `send-notification` does the same but is no longer called.
+- **Notification:** `process-submission` sends the listing link as a text message with a link preview. The link is on the broker's subdomain when its `SITE_DOMAIN` secret is set and the broker has one (otherwise `APP_URL/p/<slug>`). `send-notification` is no longer called.
+- **Link previews:** listing pages are drawn in the browser, so `apps/web/functions/p/[slug].ts` (a Pages Function) adds the listing's name, price ("₹47,000 a month") and cover photo to the HTML as Open Graph tags, which WhatsApp turns into the card. It reads `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (or `VITE_SUPABASE_ANON_KEY`) and `VITE_R2_PUBLIC_URL`, which must be set as environment variables on the Pages project (not only in a local `.env`), and falls back to the plain page when they're missing or the listing isn't found.
 
 > **To switch subdomains on** (after migrations 011 and 012):
 > 1. Cloudflare DNS for `findhouse.in`: keep the apex on the Pages project as a custom domain, and add a proxied `CNAME` record `*` pointing to the Pages project's `*.pages.dev` address.
 > 2. Deploy the Worker in `infra/broker-sites/` (`npx wrangler deploy` from that folder) after setting `PAGES_ORIGIN` in its `wrangler.toml` to the Pages production address. It serves every `*.findhouse.in` request from the Pages build and sends `www` to the apex.
-> 3. In the Pages project's environment variables, set `VITE_SITE_DOMAIN=findhouse.in` and redeploy. In Supabase, set the `SITE_DOMAIN=findhouse.in` and `APP_URL=https://findhouse.in` secrets (used by `whatsapp-webhook` and `process-submission`).
+> 3. In the Pages project's environment variables, set `VITE_SITE_DOMAIN=findhouse.in` and redeploy. In Supabase, set the `SITE_DOMAIN=findhouse.in` secret (and `APP_URL` if the main site isn't `https://findhouse.in`) for `process-submission`.
 >
 > To try it locally, put `VITE_SITE_DOMAIN=localhost` in `.env.local` and open `http://<subdomain>.localhost:5173` (Chrome and Firefox resolve `*.localhost`; Safari doesn't). The workspace session is stored per address, so a broker is signed out on subdomains.
 
 ### WhatsApp free trial
 
-A new number gets a welcome, then one free listing; after that every message is answered with the plans. The rules are in `supabase/functions/_shared/conversation.ts` (`decide`, the message texts, tested in `conversation.test.ts` with `npm run test:functions`); the two dashboard bundles carry a copy, so change all three together.
+A new number gets one free listing; after that its messages are ignored. `whatsapp-webhook` never replies: the only messages to the broker come from `process-submission`. The rules are in `supabase/functions/_shared/conversation.ts` (`decide`, plus the ready text, tested in `conversation.test.ts` with `npm run test:functions`); the two dashboard bundles carry a copy, so change all three together.
 
-- **Data (migration `013_broker_trial.sql`, run before deploying the bundles):** `brokers.plan` is `'trial'` or `'paid'`. Brokers who existed when it ran are `paid`; new numbers start as `trial`. `welcomed_at` is set when the welcome goes out, `trial_used_at` when the free listing is built (a failed build doesn't count), and `trial_over_replies` counts the plan replies.
-- **Trial:** whatever a new number sends first gets the welcome and isn't kept. After it, messages are collected as usual; "hi" gets a short reminder, and *done* builds the listing with an instant "Great! Let's build your website" reply. While it builds the number stays quiet. `process-submission` marks the trial used, then sends the link. If the build fails, the broker is asked to send it again.
-- **Trial over:** any message gets the plans (Monthly ₹499, Yearly ₹4,999 with 2 months free), at most 5 times. There is no payment or plan switch yet: to move a broker to paid, set `plan = 'paid'` on their row.
-- **Paid:** unchanged, except "hi" now gets a one-line reminder of how to send a listing.
-- **One reply per burst:** every message is recorded as the broker's latest (`last_inbound_message_id`). Automatic replies (all but the instant "building" one) wait 3 seconds and go out only if `claim_auto_reply` confirms no newer message arrived and the message wasn't answered already, so ten photos in a row get one welcome. The wait runs under `EdgeRuntime.waitUntil` so the function isn't stopped after answering Meta.
+- **Data (migrations `013_broker_trial.sql` and `014_submission_updated_at.sql`, run before deploying the bundles):** `brokers.plan` is `'trial'` or `'paid'`. Brokers who existed when it ran are `paid`; new numbers start as `trial`. `trial_used_at` marks that the free listing is built (a failed build doesn't count). `welcomed_at`, `trial_over_replies`, `last_inbound_message_id`, `last_reply_message_id` and `claim_auto_reply()` are no longer used.
+- ***done* always builds:** each WhatsApp message arrives as its own webhook call and photos take longer to save, so *done* can arrive before the messages sent just before it. `waitForSettledSession` waits until the open submission has had no new message for 3 seconds (20 at most), then the submission is closed and `process-submission` is called. If no submission was opened at all, nothing is built. `finalizeSession` only succeeds once, so a repeated *done* can't build the same submission twice.
+- **Trial:** every message is kept, including a new number's first one, and *done* builds the listing. While it builds, messages are ignored. `process-submission` marks the trial used, then sends the listing link. If the build fails, nothing is sent and the free listing is not used up.
+- **Trial over:** every message is ignored. There is no payment or plan switch yet: to move a broker to paid, set `plan = 'paid'` on their row.
+- **Paid:** unchanged.
 - **Sign-in:** trial brokers stay `ACTIVE`, so they can sign in to the dashboard with their number like everyone else.
 
 ---

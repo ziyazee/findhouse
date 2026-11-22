@@ -23,7 +23,12 @@ interface WAChangeValue {
   metadata: { display_phone_number: string; phone_number_id: string }
   contacts?: WAContact[]
   messages?: WAMessage[]
-  statuses?: unknown[]
+  statuses?: WAStatus[]
+}
+/** What happened to a message we sent: sent, delivered, read or failed (with the reason). */
+interface WAStatus {
+  id: string; status: string; recipient_id: string
+  errors?: Array<{ code: number; title: string; message?: string; error_data?: { details?: string } }>
 }
 interface WAContact { profile: { name: string }; wa_id: string }
 interface WAMessage {
@@ -43,81 +48,24 @@ interface ParsedMessage {
   caption: string | null; waMediaId: string | null; mimeType: string | null
   receivedAt: Date
 }
-interface ResolvedBroker { id: string; status: BrokerStatus; plan: Plan; welcomed: boolean; trialUsed: boolean }
+interface ResolvedBroker { id: string; status: BrokerStatus; plan: Plan; trialUsed: boolean }
 
-// ── Conversation (copy of _shared/conversation.ts) ────────────────────────────
+// ── Conversation (copy of decide in _shared/conversation.ts) ──────────────────
 
 type Plan = 'trial' | 'paid'
 type SessionState = 'none' | 'collecting' | 'processing'
-type ReplyKind = 'welcome' | 'start_hint' | 'paid_hint' | 'keep_going' | 'building' | 'trial_over'
-interface BrokerState { plan: Plan; welcomed: boolean; trialUsed: boolean }
-interface Decision { store: boolean; finalize: boolean; reply: ReplyKind | null }
+interface BrokerState { plan: Plan; trialUsed: boolean }
+/** finalize: build the listing, after waiting for the messages sent just before "done" to be saved. */
+interface Decision { store: boolean; finalize: boolean }
 
-const REPLY_DELAY_MS = 3000
-const nothing: Decision = { store: false, finalize: false, reply: null }
+const ignore: Decision = { store: false, finalize: false }
 
 function decide(broker: BrokerState, kind: MessageClassification, session: SessionState): Decision {
-  if (broker.plan === 'paid') {
-    if (kind === 'GREETING') return { ...nothing, reply: session === 'collecting' ? 'keep_going' : 'paid_hint' }
-    if (kind === 'PROPERTY_INFO') return { ...nothing, store: true }
-    if (kind === 'DONE' && session === 'collecting') return { ...nothing, store: true, finalize: true }
-    return nothing
-  }
-  if (broker.trialUsed) return { ...nothing, reply: 'trial_over' }
-  if (session === 'processing') return nothing
-  if (!broker.welcomed) return { ...nothing, reply: 'welcome' }
-  if (session === 'collecting') {
-    if (kind === 'GREETING') return { ...nothing, reply: 'keep_going' }
-    if (kind === 'PROPERTY_INFO') return { ...nothing, store: true }
-    if (kind === 'DONE') return { store: true, finalize: true, reply: 'building' }
-    return nothing
-  }
-  if (kind === 'PROPERTY_INFO') return { ...nothing, store: true }
-  if (kind === 'GREETING' || kind === 'DONE') return { ...nothing, reply: 'start_hint' }
-  return nothing
-}
-
-function displayHost(appUrl: string): string {
-  return appUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')
-}
-
-function replyText(kind: ReplyKind, appUrl: string): string {
-  const site = displayHost(appUrl)
-  switch (kind) {
-    case 'welcome':
-      return [
-        'Hi 👋 Welcome to *FindHouse*!',
-        '',
-        'We turn your WhatsApp messages into a beautiful website for each property, ready to share with your clients.',
-        '',
-        '*How it works*',
-        '1. Send photos, videos and details of a property here',
-        '2. Send *done* when you’ve sent everything',
-        '3. Get your property’s website link in about 30 seconds',
-        '',
-        `*Your dashboard*\nSign in at ${site} with this number to edit details and photos, track how your properties perform, and get your own page with all your listings.`,
-        '',
-        '*Let’s try one listing for you* 🏠',
-        'Send the photos and details of *one property*: rent or price, location, rooms, size and anything else a client should know.',
-        'When everything is sent, send *done* and we’ll build it for you.',
-      ].join('\n')
-    case 'start_hint':
-      return 'Send the photos and details of *one property* here. When everything is sent, send *done* and we’ll build its website in about 30 seconds.'
-    case 'paid_hint':
-      return 'Hi 👋 Send the photos and details of a property here, then send *done* and we’ll build its website.'
-    case 'keep_going':
-      return 'Got it 👍 Keep sending photos and details. When everything is sent, send *done*.'
-    case 'building':
-      return 'Great! 🙌 Let’s build your website. I’ll be back in a few seconds with your link.'
-    case 'trial_over':
-      return [
-        'Your free trial is over. We hope you liked your property website! 🏠',
-        '',
-        'To keep listing properties with FindHouse, choose a plan:',
-        '• *Monthly:* ₹499 a month',
-        '• *Yearly:* ₹4,999 a year (2 months free)',
-      ].join('\n')
-  }
+  // Trial: anything while the free listing is built, and anything after it, is ignored.
+  if (broker.plan === 'trial' && (broker.trialUsed || session === 'processing')) return ignore
+  if (kind === 'PROPERTY_INFO') return { store: true, finalize: false }
+  if (kind === 'DONE') return { store: true, finalize: true }
+  return ignore
 }
 
 // ── Message classifier ────────────────────────────────────────────────────────
@@ -172,18 +120,6 @@ async function verifyWebhookSignature(rawBody: string, signatureHeader: string |
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody))
   const hex = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('')
   return signatureHeader === `sha256=${hex}`
-}
-
-async function sendWAMessage(toNumber: string, text: string): Promise<void> {
-  const accessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
-  const phoneNumberId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
-  if (!accessToken || !phoneNumberId) throw new Error('WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID is not set')
-  const res = await fetch(`${WA_API_BASE}/${phoneNumberId}/messages`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: toNumber, type: 'text', text: { body: text } }),
-  })
-  if (!res.ok) throw new Error(`Failed to send WhatsApp message: ${res.status} — ${await res.text()}`)
 }
 
 function mimeToExtension(mimeType: string): string {
@@ -261,27 +197,14 @@ async function resolveBroker(db: SupabaseClient, phone: string): Promise<Resolve
     .from('brokers')
     .upsert({ phone, status: 'ACTIVE' }, { onConflict: 'phone', ignoreDuplicates: true })
   if (upsertError) throw new Error(`[brokerManager] Upsert failed for ${phone}: ${upsertError.message}`)
-  const { data, error: selectError } = await db.from('brokers').select('id, status, plan, welcomed_at, trial_used_at').eq('phone', phone).single()
+  const { data, error: selectError } = await db.from('brokers').select('id, status, plan, trial_used_at').eq('phone', phone).single()
   if (selectError || !data) { console.error(`[brokerManager] Could not read broker for ${phone}:`, selectError?.message); return null }
   return {
     id: data.id as string,
     status: data.status as BrokerStatus,
     plan: data.plan === 'trial' ? 'trial' : 'paid',
-    welcomed: data.welcomed_at != null,
     trialUsed: data.trial_used_at != null,
   }
-}
-
-async function noteInboundMessage(db: SupabaseClient, brokerId: string, waMessageId: string): Promise<void> {
-  const { error } = await db.from('brokers').update({ last_inbound_message_id: waMessageId }).eq('id', brokerId)
-  if (error) console.error(`[brokerManager] Could not note message ${waMessageId}:`, error.message)
-}
-
-/** See claim_auto_reply in migration 013. */
-async function claimAutoReply(db: SupabaseClient, brokerId: string, waMessageId: string, kind: ReplyKind): Promise<boolean> {
-  const { data, error } = await db.rpc('claim_auto_reply', { claim_broker_id: brokerId, message_id: waMessageId, reply_kind: kind })
-  if (error) { console.error(`[brokerManager] claim_auto_reply failed for ${waMessageId}:`, error.message); return false }
-  return data === true
 }
 
 // ── Session manager ───────────────────────────────────────────────────────────
@@ -315,9 +238,43 @@ async function addMessageToSession(db: SupabaseClient, sessionId: string, _broke
   }
 }
 
-async function finalizeSession(db: SupabaseClient, sessionId: string): Promise<void> {
-  const { error } = await db.from('whatsapp_submissions').update({ status: 'PROCESSING', updated_at: new Date().toISOString() }).eq('id', sessionId).eq('status', 'COLLECTING')
+/** False when it was no longer COLLECTING (another "done", or a repeat delivery, got there first). */
+async function finalizeSession(db: SupabaseClient, sessionId: string): Promise<boolean> {
+  const { data, error } = await db.from('whatsapp_submissions').update({ status: 'PROCESSING', updated_at: new Date().toISOString() })
+    .eq('id', sessionId).eq('status', 'COLLECTING').select('id')
   if (error) throw new Error(`Failed to finalize submission: ${error.message}`)
+  return (data?.length ?? 0) > 0
+}
+
+/** "done" waits until the open submission has had no new message for this long… */
+const SETTLE_QUIET_MS = 3000
+/** …or this long at most. */
+const SETTLE_MAX_MS = 20000
+
+/**
+ * Each WhatsApp message arrives as its own webhook call and photos take longer to save, so "done" can arrive
+ * before the messages sent just before it are stored (or before their submission exists). Waits until the broker's
+ * open submission has stopped growing and returns it, or null if none was opened.
+ */
+async function waitForSettledSession(db: SupabaseClient, brokerId: string): Promise<string | null> {
+  const started = Date.now()
+  let snapshot = ''
+  let quietSince = started
+  while (Date.now() - started < SETTLE_MAX_MS) {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const active = await getActiveSession(db, brokerId)
+    const { count } = active
+      ? await db.from('whatsapp_submission_messages').select('id', { count: 'exact', head: true }).eq('submission_id', active.id)
+      : { count: 0 }
+    const now = active ? `${active.id}:${count ?? 0}` : ''
+    if (now !== snapshot) {
+      snapshot = now
+      quietSince = Date.now()
+    } else if (active && Date.now() - quietSince >= SETTLE_QUIET_MS) {
+      return active.id
+    }
+  }
+  return (await getActiveSession(db, brokerId))?.id ?? null
 }
 
 /** A build stuck longer than this no longer counts as in progress. */
@@ -341,9 +298,7 @@ const db = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
-
-/** Keeps the function alive for work that outlasts the response (the delayed replies). */
+/** Keeps the function alive for work that outlasts the response (media downloads and uploads). */
 function runInBackground(task: Promise<unknown>) {
   const runtime = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime
   runtime?.waitUntil(task)
@@ -377,32 +332,26 @@ async function processWebhook(rawBody: string) {
   let payload: WAWebhookPayload
   try { payload = JSON.parse(rawBody) } catch { console.error('[webhook] Failed to parse payload'); return }
   if (payload.object !== 'whatsapp_business_account') return
-  const replies: Promise<void>[] = []
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
       if (change.field !== 'messages') continue
+      for (const s of change.value.statuses ?? []) logDeliveryStatus(s)
       for (const msg of change.value.messages ?? []) {
-        await handleMessage(msg, replies).catch((err) =>
+        await handleMessage(msg).catch((err) =>
           console.error(`[webhook] Error handling message ${msg.id}:`, err))
       }
     }
   }
-  await Promise.all(replies)
 }
 
-/**
- * Waits a moment, then answers the message unless the broker sent another one meanwhile (that one gets the reply)
- * or the reply's limit is reached.
- */
-async function replyLater(brokerId: string, to: string, waMessageId: string, kind: ReplyKind): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, REPLY_DELAY_MS))
-  if (!(await claimAutoReply(db, brokerId, waMessageId, kind))) return
-  await sendWAMessage(to, replyText(kind, APP_URL))
-    .catch((err) => console.error(`[webhook] Failed to send ${kind} reply to ${to}:`, err))
+function logDeliveryStatus(s: WAStatus) {
+  const why = (s.errors ?? []).map((e) => `${e.code} ${e.title}${e.error_data?.details ? ` — ${e.error_data.details}` : ''}`).join('; ')
+  const line = `[webhook] Reply ${s.id} to ${s.recipient_id}: ${s.status}${why ? ` (${why})` : ''}`
+  if (s.status === 'failed') console.error(line)
+  else console.log(line)
 }
 
-/** A delayed reply, if the message gets one, is added to `replies` for the caller to wait on. */
-async function handleMessage(msg: WAMessage, replies: Promise<void>[]) {
+async function handleMessage(msg: WAMessage) {
   const fromNumber = msg.from
   console.log(`[webhook] Message from ${fromNumber} — type: ${msg.type}, id: ${msg.id}`)
 
@@ -416,18 +365,15 @@ async function handleMessage(msg: WAMessage, replies: Promise<void>[]) {
   const classification = classifyMessage(msg)
   console.log(`[webhook] Classification: ${classification}`)
 
-  await noteInboundMessage(db, brokerId, msg.id)
   const active = await getActiveSession(db, brokerId)
   const session: SessionState = active
     ? 'collecting'
     : broker.plan === 'trial' && await hasProcessingSession(db, brokerId) ? 'processing' : 'none'
-  const decision = decide(broker, classification, session)
+  const decision = decide({ plan: broker.plan, trialUsed: broker.trialUsed }, classification, session)
   console.log(`[webhook] ${broker.plan} broker, session ${session}:`, decision)
 
-  if (decision.reply && decision.reply !== 'building') {
-    replies.push(replyLater(brokerId, fromNumber, msg.id, decision.reply))
-  }
   if (!decision.store) return
+  if (decision.finalize) return buildListing(msg, brokerId, classification)
 
   let sessionId: string
   if (active) { sessionId = active.id } else { sessionId = await createSession(db, brokerId, fromNumber); console.log(`[webhook] New session created: ${sessionId}`) }
@@ -453,18 +399,29 @@ async function handleMessage(msg: WAMessage, replies: Promise<void>[]) {
 
   await addMessageToSession(db, sessionId, brokerId, parsed, storagePath)
   console.log(`[webhook] Message ${msg.id} stored in session ${sessionId}`)
+}
 
-  if (decision.finalize) {
-    await finalizeSession(db, sessionId)
-    console.log(`[webhook] Session ${sessionId} finalized — triggering processing`)
-    if (decision.reply === 'building') {
-      await sendWAMessage(fromNumber, replyText('building', APP_URL))
-        .catch((err) => console.error(`[webhook] Failed to send building reply to ${fromNumber}:`, err))
-    }
-    fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-submission`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
-      body: JSON.stringify({ sessionId }),
-    }).catch((err) => console.error('[webhook] Failed to invoke process-submission:', err))
+/** DONE: wait for the messages sent just before it to be saved, then close the submission and build it. */
+async function buildListing(msg: WAMessage, brokerId: string, classification: MessageClassification) {
+  const sessionId = await waitForSettledSession(db, brokerId)
+  if (!sessionId) { console.log(`[webhook] DONE from ${msg.from} but nothing was sent to build`); return }
+
+  await addMessageToSession(db, sessionId, brokerId, {
+    waMessageId: msg.id, fromNumber: msg.from, type: 'text', classification,
+    textContent: msg.text?.body ?? null, caption: null, waMediaId: null, mimeType: null,
+    receivedAt: new Date(parseInt(msg.timestamp) * 1000),
+  }, null)
+
+  if (!(await finalizeSession(db, sessionId))) {
+    console.log(`[webhook] Session ${sessionId} was already finalized — not building it twice`)
+    return
   }
+  console.log(`[webhook] Session ${sessionId} finalized — triggering processing`)
+  // Awaited so the function isn't shut down before the request goes out.
+  const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-submission`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
+    body: JSON.stringify({ sessionId }),
+  }).catch((err) => { console.error('[webhook] Failed to invoke process-submission:', err); return null })
+  if (res) console.log(`[webhook] process-submission answered ${res.status} for session ${sessionId}`)
 }

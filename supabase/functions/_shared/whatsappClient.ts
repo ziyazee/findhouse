@@ -36,6 +36,10 @@ export async function downloadWAMedia(mediaId: string): Promise<{ bytes: Uint8Ar
 
 /** Sends a text message to a WhatsApp number. */
 export async function sendWAMessage(toNumber: string, text: string): Promise<void> {
+  await sendWA(toNumber, { type: 'text', text: { body: text, preview_url: true } })
+}
+
+async function sendWA(toNumber: string, message: Record<string, unknown>): Promise<void> {
   const accessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
   const phoneNumberId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
 
@@ -53,8 +57,7 @@ export async function sendWAMessage(toNumber: string, text: string): Promise<voi
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
       to: toNumber,
-      type: 'text',
-      text: { body: text },
+      ...message,
     }),
   })
 

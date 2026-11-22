@@ -5,7 +5,7 @@ import {
   completeSession,
   failSession,
 } from '../_shared/sessionManager.ts'
-import { failedText, listingUrl, readyText } from '../_shared/conversation.ts'
+import { listingUrl } from '../_shared/conversation.ts'
 import { sendWAMessage } from '../_shared/whatsappClient.ts'
 
 const db = createClient(
@@ -16,21 +16,15 @@ const db = createClient(
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
 const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || undefined
 
+/** WhatsApp draws the link preview card from the listing page's preview tags (apps/web/functions/p/[slug].ts). */
 async function sendText(to: string, body: string): Promise<void> {
   await sendWAMessage(to, body).catch((err) => console.error('[process-submission] WhatsApp reply failed:', err))
 }
 
-/** `*` so this still works before migration 012 (subdomain) has run. */
 async function loadBroker(brokerId: string | null): Promise<{ plan: string | null; subdomain: string | null } | null> {
   if (!brokerId) return null
-  const { data } = await db.from('brokers').select('*').eq('id', brokerId).maybeSingle()
+  const { data } = await db.from('brokers').select('plan, subdomain').eq('id', brokerId).maybeSingle()
   return data ? { plan: data.plan ?? null, subdomain: data.subdomain ?? null } : null
-}
-
-/** A failed build doesn't use up the free listing; tell a trial broker to send it again. */
-async function tellTrialBrokerFailed(brokerId: string | null, phone: string): Promise<void> {
-  const broker = await loadBroker(brokerId)
-  if (broker?.plan === 'trial') await sendText(phone, failedText())
 }
 
 Deno.serve(async (req: Request) => {
@@ -75,7 +69,6 @@ Deno.serve(async (req: Request) => {
 
     if (propertyMessages.length === 0) {
       await failSession(db, sessionId, 'No property information found in this submission.')
-      await tellTrialBrokerFailed(session.broker_id, session.sender_phone)
       return new Response('No property content', { status: 422 })
     }
 
@@ -146,11 +139,11 @@ Deno.serve(async (req: Request) => {
     // ── 6. Mark session COMPLETED ───────────────────────────────────────────
     await completeSession(db, sessionId, property.id)
 
-    // ── 7. Use up the free listing, then send the link ──────────────────────
+    // ── 7. Use up the free listing, then tell the broker ────────────────────
     const supabaseUrl  = Deno.env.get('SUPABASE_URL')!
     const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // Before the broker hears about it, so their next message gets the plans.
+    // Before the broker hears about it, so their next message is ignored.
     const broker = await loadBroker(session.broker_id)
     if (broker?.plan === 'trial') {
       const { error: trialError } = await db.from('brokers')
@@ -160,8 +153,7 @@ Deno.serve(async (req: Request) => {
       if (trialError) console.error(`[process-submission] Could not mark trial used: ${trialError.message}`)
     }
 
-    const url = listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain)
-    await sendText(session.sender_phone, readyText(extracted.title, url, APP_URL))
+    await sendText(session.sender_phone, listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain))
 
     // ── 8. Classify property images (fire-and-forget) ────────────────────────
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {
@@ -181,7 +173,6 @@ Deno.serve(async (req: Request) => {
     const reason = err instanceof Error ? err.message : String(err)
     console.error(`[process-submission] Failed: ${reason}`)
     await failSession(db, sessionId, reason).catch(() => {})
-    await tellTrialBrokerFailed(session.broker_id, session.sender_phone).catch(() => {})
     return new Response(JSON.stringify({ ok: false, error: reason }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

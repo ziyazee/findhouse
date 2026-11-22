@@ -27,7 +27,15 @@ export interface WAChangeValue {
   metadata: { display_phone_number: string; phone_number_id: string }
   contacts?: WAContact[]
   messages?: WAMessage[]
-  statuses?: unknown[]
+  statuses?: WAStatus[]
+}
+
+/** What happened to a message we sent: sent, delivered, read or failed (with the reason). */
+export interface WAStatus {
+  id: string
+  status: string
+  recipient_id: string
+  errors?: Array<{ code: number; title: string; message?: string; error_data?: { details?: string } }>
 }
 
 export interface WAContact {

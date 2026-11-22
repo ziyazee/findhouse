@@ -142,61 +142,55 @@ function generateSlug(title: string): string {
   return `${safe || 'property'}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-// ── Broker replies (copy of the matching parts of _shared/conversation.ts) ────
+// ── Ready message (copy of listingUrl in _shared/conversation.ts) ──
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
 const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || undefined
 
-function displayHost(appUrl: string): string {
-  return appUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')
-}
-
-function readyText(title: string, listingUrl: string, appUrl: string): string {
-  return [
-    'Your property website is ready! 🎉',
-    '',
-    `*${title}*`,
-    listingUrl,
-    '',
-    `Share this link with your clients. To edit details or photos, sign in at ${displayHost(appUrl)} with this number.`,
-  ].join('\n')
-}
-
-function failedText(): string {
-  return 'Sorry, we couldn’t build that listing. Please send the photos and details again, then send *done*. This doesn’t use up your free listing.'
-}
-
+/** On the broker's subdomain when subdomains are on (SITE_DOMAIN) and they have one; otherwise the main site. */
 function listingUrl(slug: string, appUrl: string, siteDomain: string | undefined, subdomain: string | null | undefined): string {
   if (siteDomain && subdomain) return `https://${subdomain}.${siteDomain}/p/${slug}`
   return `${appUrl.replace(/\/+$/, '')}/p/${slug}`
 }
 
-async function sendText(to: string, body: string): Promise<void> {
+/** WhatsApp wants the full international number as digits only (919876543210): no +, spaces or dashes. */
+function normalizePhone(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '')
+  return /^[1-9]\d{7,14}$/.test(digits) ? digits : null
+}
+
+/** WhatsApp draws the link preview card from the listing page's preview tags (apps/web/functions/p/[slug].ts). */
+async function sendText(phone: string, body: string): Promise<void> {
   const waToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
   const waPhoneId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
   if (!waToken || !waPhoneId) {
     console.warn('[process-submission] WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID not set — skipping reply')
     return
   }
-  const res = await fetch(`https://graph.facebook.com/v19.0/${waPhoneId}/messages`, {
+  const to = normalizePhone(phone)
+  if (!to) {
+    console.error(`[process-submission] Not a valid international phone number: "${phone}" — skipping reply`)
+    return
+  }
+  const res = await fetch(`https://graph.facebook.com/v21.0/${waPhoneId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${waToken}` },
-    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body } }),
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body, preview_url: true } }),
   }).catch((err) => { console.error('[process-submission] WhatsApp reply failed:', err); return null })
-  if (res && !res.ok) console.error(`[process-submission] WhatsApp reply failed: ${res.status} — ${await res.text()}`)
+  if (!res) return
+  const answer = await res.text()
+  if (!res.ok) {
+    console.error(`[process-submission] WhatsApp reply failed: ${res.status} — ${answer}`)
+    return
+  }
+  // Accepted is not delivered: the outcome arrives later as a delivery status, which whatsapp-webhook logs.
+  console.log(`[process-submission] WhatsApp accepted the reply to ${to}: ${answer}`)
 }
 
-/** `*` so this still works before migration 012 (subdomain) has run. */
 async function loadBroker(brokerId: string | null): Promise<{ plan: string | null; subdomain: string | null } | null> {
   if (!brokerId) return null
-  const { data } = await db.from('brokers').select('*').eq('id', brokerId).maybeSingle()
+  const { data } = await db.from('brokers').select('plan, subdomain').eq('id', brokerId).maybeSingle()
   return data ? { plan: data.plan ?? null, subdomain: data.subdomain ?? null } : null
-}
-
-/** A failed build doesn't use up the free listing; tell a trial broker to send it again. */
-async function tellTrialBrokerFailed(brokerId: string | null, phone: string): Promise<void> {
-  const broker = await loadBroker(brokerId)
-  if (broker?.plan === 'trial') await sendText(phone, failedText())
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -237,7 +231,6 @@ Deno.serve(async (req: Request) => {
 
     if (propertyMessages.length === 0) {
       await failSession(db, sessionId, 'No property information found in this submission.')
-      await tellTrialBrokerFailed(session.broker_id, session.sender_phone)
       return new Response('No property content', { status: 422 })
     }
 
@@ -288,7 +281,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // The free listing is used once it's built, before the broker hears about it, so their next message gets the plans.
+    // The free listing is used once it's built, before the broker hears about it, so their next message is ignored.
     const broker = await loadBroker(session.broker_id)
     if (broker?.plan === 'trial') {
       const { error: trialError } = await db.from('brokers')
@@ -298,8 +291,7 @@ Deno.serve(async (req: Request) => {
       if (trialError) console.error(`[process-submission] Could not mark trial used: ${trialError.message}`)
     }
 
-    const url = listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain)
-    await sendText(session.sender_phone, readyText(extracted.title, url, APP_URL))
+    await sendText(session.sender_phone, listingUrl(property.slug, APP_URL, SITE_DOMAIN, broker?.subdomain))
 
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {
       method: 'POST',
@@ -312,7 +304,6 @@ Deno.serve(async (req: Request) => {
     const reason = err instanceof Error ? err.message : String(err)
     console.error(`[process-submission] Failed: ${reason}`)
     await failSession(db, sessionId, reason).catch(() => {})
-    await tellTrialBrokerFailed(session.broker_id, session.sender_phone).catch(() => {})
     return new Response(JSON.stringify({ ok: false, error: reason }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 })

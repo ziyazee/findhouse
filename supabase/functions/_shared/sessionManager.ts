@@ -65,18 +65,54 @@ export async function addMessageToSession(
   }
 }
 
-/** Transitions a submission from COLLECTING → PROCESSING when DONE is received. */
+/**
+ * Transitions a submission from COLLECTING → PROCESSING when DONE is received.
+ * False when it was no longer COLLECTING (another "done", or a repeat delivery, got there first).
+ */
 export async function finalizeSession(
   db: SupabaseClient,
   sessionId: string,
-): Promise<void> {
-  const { error } = await db
+): Promise<boolean> {
+  const { data, error } = await db
     .from('whatsapp_submissions')
     .update({ status: 'PROCESSING', updated_at: new Date().toISOString() })
     .eq('id', sessionId)
     .eq('status', 'COLLECTING')   // guard: only advance if still COLLECTING
+    .select('id')
 
   if (error) throw new Error(`Failed to finalize submission: ${error.message}`)
+  return (data?.length ?? 0) > 0
+}
+
+/** "done" waits until the open submission has had no new message for this long… */
+const SETTLE_QUIET_MS = 3000
+/** …or this long at most. */
+const SETTLE_MAX_MS = 20000
+
+/**
+ * Each WhatsApp message arrives as its own webhook call and photos take longer to save, so "done" can arrive
+ * before the messages sent just before it are stored (or before their submission exists). Waits until the broker's
+ * open submission has stopped growing and returns it, or null if none was opened.
+ */
+export async function waitForSettledSession(db: SupabaseClient, brokerId: string): Promise<string | null> {
+  const started = Date.now()
+  let snapshot = ''
+  let quietSince = started
+  while (Date.now() - started < SETTLE_MAX_MS) {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const active = await getActiveSession(db, brokerId)
+    const { count } = active
+      ? await db.from('whatsapp_submission_messages').select('id', { count: 'exact', head: true }).eq('submission_id', active.id)
+      : { count: 0 }
+    const now = active ? `${active.id}:${count ?? 0}` : ''
+    if (now !== snapshot) {
+      snapshot = now
+      quietSince = Date.now()
+    } else if (active && Date.now() - quietSince >= SETTLE_QUIET_MS) {
+      return active.id
+    }
+  }
+  return (await getActiveSession(db, brokerId))?.id ?? null
 }
 
 /** A build stuck longer than this no longer counts as in progress. */

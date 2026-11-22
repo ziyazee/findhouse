@@ -1,62 +1,48 @@
 import { describe, expect, it } from 'vitest'
-import { decide, displayHost, listingUrl, replyText, type BrokerState } from './conversation.ts'
+import { decide, listingUrl, type BrokerState } from './conversation.ts'
 
-const paid: BrokerState = { plan: 'paid', welcomed: false, trialUsed: false }
-const fresh: BrokerState = { plan: 'trial', welcomed: false, trialUsed: false }
-const welcomed: BrokerState = { ...fresh, welcomed: true }
-const used: BrokerState = { ...welcomed, trialUsed: true }
+const paid: BrokerState = { plan: 'paid', trialUsed: false }
+const trial: BrokerState = { plan: 'trial', trialUsed: false }
+const used: BrokerState = { plan: 'trial', trialUsed: true }
 
-describe('decide: paid brokers', () => {
-  it('keep the usual flow and get a short hint for a greeting', () => {
-    expect(decide(paid, 'GREETING', 'none')).toEqual({ store: false, finalize: false, reply: 'paid_hint' })
-    expect(decide(paid, 'GREETING', 'collecting').reply).toBe('keep_going')
-    expect(decide(paid, 'PROPERTY_INFO', 'none')).toEqual({ store: true, finalize: false, reply: null })
-    expect(decide(paid, 'DONE', 'collecting')).toEqual({ store: true, finalize: true, reply: null })
-    expect(decide(paid, 'DONE', 'none')).toEqual({ store: false, finalize: false, reply: null })
-    expect(decide(paid, 'OTHER', 'none').reply).toBeNull()
-  })
-})
+const ignore = { store: false, finalize: false }
+const store = { store: true, finalize: false }
+const build = { store: true, finalize: true }
 
-describe('decide: trial brokers', () => {
-  it('welcomes a new number and drops whatever it sent first', () => {
-    for (const kind of ['GREETING', 'PROPERTY_INFO', 'DONE'] as const) {
-      expect(decide(fresh, kind, 'none')).toEqual({ store: false, finalize: false, reply: 'welcome' })
+describe('decide', () => {
+  it('keeps details and builds on done, even before a submission is open', () => {
+    for (const broker of [paid, trial]) {
+      expect(decide(broker, 'PROPERTY_INFO', 'none')).toEqual(store)
+      expect(decide(broker, 'PROPERTY_INFO', 'collecting')).toEqual(store)
+      expect(decide(broker, 'DONE', 'collecting')).toEqual(build)
+      expect(decide(broker, 'DONE', 'none')).toEqual(build)
     }
   })
 
-  it('collects the free listing after the welcome', () => {
-    expect(decide(welcomed, 'GREETING', 'none').reply).toBe('start_hint')
-    expect(decide(welcomed, 'DONE', 'none').reply).toBe('start_hint')
-    expect(decide(welcomed, 'PROPERTY_INFO', 'none').store).toBe(true)
-    expect(decide(welcomed, 'PROPERTY_INFO', 'collecting').store).toBe(true)
-    expect(decide(welcomed, 'GREETING', 'collecting').reply).toBe('keep_going')
-    expect(decide(welcomed, 'DONE', 'collecting')).toEqual({ store: true, finalize: true, reply: 'building' })
+  it('keeps a new trial number’s first message', () => {
+    expect(decide(trial, 'PROPERTY_INFO', 'none')).toEqual(store)
   })
 
-  it('stays quiet while the listing is being built', () => {
-    expect(decide(welcomed, 'PROPERTY_INFO', 'processing')).toEqual({ store: false, finalize: false, reply: null })
+  it('ignores greetings and empty messages', () => {
+    expect(decide(paid, 'GREETING', 'collecting')).toEqual(ignore)
+    expect(decide(trial, 'OTHER', 'none')).toEqual(ignore)
   })
 
-  it('answers everything with the plans once the free listing is used', () => {
+  it('ignores a trial broker while the free listing is built and once it is used', () => {
+    expect(decide(trial, 'PROPERTY_INFO', 'processing')).toEqual(ignore)
+    expect(decide(trial, 'DONE', 'processing')).toEqual(ignore)
     for (const kind of ['GREETING', 'PROPERTY_INFO', 'DONE', 'OTHER'] as const) {
-      expect(decide(used, kind, 'none')).toEqual({ store: false, finalize: false, reply: 'trial_over' })
+      expect(decide(used, kind, 'none')).toEqual(ignore)
     }
+  })
+
+  it('lets paid brokers keep going while a listing is built', () => {
+    expect(decide(paid, 'PROPERTY_INFO', 'processing')).toEqual(store)
   })
 })
 
-describe('texts and links', () => {
-  it('shows the site without its scheme', () => {
-    expect(displayHost('https://findhouse.in/')).toBe('findhouse.in')
-    expect(replyText('welcome', 'https://findhouse.in')).toContain('Sign in at findhouse.in')
-  })
-
-  it('lists both plans', () => {
-    const text = replyText('trial_over', 'https://findhouse.in')
-    expect(text).toContain('₹499 a month')
-    expect(text).toContain('₹4,999 a year (2 months free)')
-  })
-
-  it('links the listing on the broker subdomain when there is one', () => {
+describe('ready message', () => {
+  it('links the listing on the broker subdomain when there is one, else the main site', () => {
     expect(listingUrl('flat-x1', 'https://findhouse.in', 'findhouse.in', 'ravi')).toBe('https://ravi.findhouse.in/p/flat-x1')
     expect(listingUrl('flat-x1', 'https://findhouse.in/', 'findhouse.in', null)).toBe('https://findhouse.in/p/flat-x1')
     expect(listingUrl('flat-x1', 'https://findhouse.in', undefined, 'ravi')).toBe('https://findhouse.in/p/flat-x1')
