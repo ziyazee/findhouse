@@ -1,27 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AuthSession } from './auth.types'
 
-const db = vi.hoisted(() => ({
-  result: { data: null as unknown, error: null as unknown },
-  filter: '',
-  rpc: { data: null as unknown, error: null as unknown },
-  rpcArgs: null as unknown,
+const sb = vi.hoisted(() => ({
+  signIn: { data: {}, error: null as unknown },
+  signInArgs: null as unknown,
+  signedOut: 0,
+  authSession: { data: { session: { access_token: 't' } as unknown }, error: null as unknown },
+  me: { data: null as unknown, error: null as unknown },
+  check: { data: null as unknown, error: null as unknown },
+  rpcCalls: [] as Array<[string, unknown]>,
+}))
+
+vi.mock('@supabase/supabase-js', () => ({
+  isAuthRetryableFetchError: (e: { retryable?: boolean } | null) => Boolean(e?.retryable),
 }))
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
-    rpc: async (_name: string, args: unknown) => {
-      db.rpcArgs = args
-      return db.rpc
+    auth: {
+      signInWithPassword: async (args: unknown) => {
+        sb.signInArgs = args
+        return sb.signIn
+      },
+      signOut: async () => void (sb.signedOut += 1),
+      getSession: async () => sb.authSession,
     },
-    from: () => ({
-      select: () => ({
-        eq: (col: string, value: string) => {
-          db.filter = `${col}=${value}`
-          return { maybeSingle: async () => db.result }
-        },
-      }),
-    }),
+    rpc: async (name: string, args: unknown) => {
+      sb.rpcCalls.push([name, args])
+      return name === 'broker_me' ? sb.me : sb.check
+    },
   },
 }))
 
@@ -31,15 +38,25 @@ vi.stubGlobal('localStorage', {
   setItem: (k: string, v: string) => void store.set(k, v),
   removeItem: (k: string) => void store.delete(k),
 })
+const fetchMock = vi.fn()
+vi.stubGlobal('fetch', fetchMock)
 
 const { authService, brokerAccessError } = await import('./AuthService')
 
-const saved: AuthSession = { user: { id: 'b1', phone: '919876543210', name: null, role: 'broker' } }
+const saved: AuthSession = { user: { id: 'b1', phone: '919876543210', name: 'Ravi', role: 'broker' } }
+const me = (status = 'ACTIVE') => ({ data: [{ id: 'b1', phone: '919876543210', name: 'Ravi', status, subdomain: 'ravi' }], error: null })
+const badLogin = { code: 'invalid_credentials', message: 'Invalid login credentials' }
 
 beforeEach(() => {
   store.clear()
-  store.set('findhouse_broker_session', JSON.stringify(saved))
-  db.result = { data: null, error: null }
+  sb.signIn = { data: {}, error: null }
+  sb.signedOut = 0
+  sb.signInArgs = null
+  sb.authSession = { data: { session: { access_token: 't' } }, error: null }
+  sb.me = me()
+  sb.check = { data: null, error: null }
+  sb.rpcCalls = []
+  fetchMock.mockReset()
 })
 
 describe('brokerAccessError', () => {
@@ -51,73 +68,74 @@ describe('brokerAccessError', () => {
   })
 })
 
-const signIn = (outcome: string, extra: Record<string, unknown> = {}) => ({
-  data: [{ outcome, id: null, phone: null, status: null, name: null, ...extra }],
-  error: null,
-})
-const broker = { id: 'b1', phone: '919876543210', status: 'ACTIVE', name: 'Ravi' }
-
 describe('authService.login', () => {
-  beforeEach(() => store.clear())
-
-  it('sends the normalized phone and the password, and saves the session', async () => {
-    db.rpc = signIn('ok', broker)
+  it('signs in with the phone as the login name and saves the session', async () => {
     const session = await authService.login({ phone: '+91 98765 43210', password: 'hunter2hunter2' })
-    expect(db.rpcArgs).toEqual({ login_phone: '919876543210', login_password: 'hunter2hunter2' })
+    expect(sb.signInArgs).toEqual({ email: '919876543210@brokers.findhouse.in', password: 'hunter2hunter2' })
     expect(session.user).toEqual({ id: 'b1', phone: '919876543210', name: 'Ravi', role: 'broker' })
     expect(authService.getStoredSession()).toEqual(session)
   })
 
   it.each([
-    ['wrong_password', /wrong password/i],
-    ['not_registered', /Register tab/],
-    ['no_account', /isn’t registered/],
-  ])('refuses %s without saving a session', async (outcome, message) => {
-    db.rpc = signIn(outcome)
+    ['not_invited', /isn’t registered/],
+    ['invited', /Register tab/],
+    ['not_active', /inactive or blocked/],
+    ['already_registered', /wrong password/i],
+  ])('explains a failed sign-in for %s', async (status, message) => {
+    sb.signIn = { data: {}, error: badLogin }
+    sb.check = { data: status, error: null }
     await expect(authService.login({ phone: '9876543210', password: 'x' })).rejects.toThrow(message)
     expect(authService.getStoredSession()).toBeNull()
   })
 
-  it('refuses inactive or blocked brokers', async () => {
-    db.rpc = signIn('not_active', { status: 'BLOCKED' })
+  it('signs a blocked broker out again', async () => {
+    sb.me = me('BLOCKED')
     await expect(authService.login({ phone: '9876543210', password: 'whatever-pass' })).rejects.toThrow(/blocked/)
+    expect(sb.signedOut).toBe(1)
     expect(authService.getStoredSession()).toBeNull()
   })
 
-  it('reports a connection problem instead of "no account"', async () => {
-    db.rpc = { data: null, error: { message: 'fetch failed' } }
+  it('refuses a sign-in with no broker behind it', async () => {
+    sb.me = { data: [], error: null }
+    await expect(authService.login({ phone: '9876543210', password: 'whatever-pass' })).rejects.toThrow(/isn’t registered/)
+    expect(sb.signedOut).toBe(1)
+  })
+
+  it('reports a connection problem instead of a wrong password', async () => {
+    sb.signIn = { data: {}, error: { message: 'fetch failed', retryable: true } }
     await expect(authService.login({ phone: '9876543210', password: 'whatever-pass' })).rejects.toThrow(/reach FindHouse/)
   })
 })
 
 describe('authService.checkRegistration', () => {
   it('asks about the normalized number and passes the answer on', async () => {
-    db.rpc = { data: 'invited', error: null }
+    sb.check = { data: 'invited', error: null }
     await expect(authService.checkRegistration('+91 98765 43210')).resolves.toBe('invited')
-    expect(db.rpcArgs).toEqual({ check_phone: '919876543210' })
+    expect(sb.rpcCalls[0]).toEqual(['broker_register_check', { check_phone: '919876543210' }])
   })
 
   it('treats an unknown answer as not invited', async () => {
-    db.rpc = { data: 'something-new', error: null }
+    sb.check = { data: 'something-new', error: null }
     await expect(authService.checkRegistration('9876543210')).resolves.toBe('not_invited')
   })
 
   it('reports a connection problem', async () => {
-    db.rpc = { data: null, error: { message: 'fetch failed' } }
+    sb.check = { data: null, error: { message: 'fetch failed' } }
     await expect(authService.checkRegistration('9876543210')).rejects.toThrow(/reach FindHouse/)
   })
 })
 
 describe('authService.register', () => {
-  beforeEach(() => store.clear())
   const input = { phone: '98765 43210', name: '  Rubbing ', password: 'long-enough-pass' }
 
-  it('sends the number, trimmed name and password, and saves the session', async () => {
-    db.rpc = signIn('registered', { ...broker, name: 'Rubbing', subdomain: 'rubbing' })
+  it('creates the account on the server, then signs in', async () => {
+    fetchMock.mockResolvedValue({ ok: true })
     const session = await authService.register(input)
-    expect(db.rpcArgs).toEqual({ reg_phone: '919876543210', reg_name: 'Rubbing', reg_password: 'long-enough-pass' })
-    expect(session.user.name).toBe('Rubbing')
-    expect(authService.getStoredSession()).toEqual(session)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/auth/register')
+    expect(JSON.parse(init.body)).toEqual({ phone: '919876543210', name: 'Rubbing', password: 'long-enough-pass' })
+    expect(sb.signInArgs).toEqual({ email: '919876543210@brokers.findhouse.in', password: 'long-enough-pass' })
+    expect(session.user.id).toBe('b1')
   })
 
   it.each([
@@ -127,38 +145,60 @@ describe('authService.register', () => {
     ['invalid_name', /3 to 32/],
     ['name_reserved', /reserved/],
     ['name_taken', /already uses that name/],
-  ])('refuses %s without saving a session', async (outcome, message) => {
-    db.rpc = signIn(outcome)
+  ])('refuses %s without signing in', async (code, message) => {
+    fetchMock.mockResolvedValue({ ok: false, json: async () => ({ code }) })
     await expect(authService.register(input)).rejects.toThrow(message)
+    expect(sb.signInArgs).toBeNull()
     expect(authService.getStoredSession()).toBeNull()
+  })
+
+  it('reports a connection problem', async () => {
+    fetchMock.mockRejectedValue(new TypeError('fetch failed'))
+    await expect(authService.register(input)).rejects.toThrow(/reach FindHouse/)
   })
 })
 
 describe('authService.revalidate', () => {
+  beforeEach(() => store.set('findhouse_broker_session', JSON.stringify(saved)))
+
   it('keeps an active broker signed in', async () => {
-    db.result = { data: { id: 'b1', phone: '919876543210', status: 'ACTIVE' }, error: null }
     await expect(authService.revalidate(saved)).resolves.toEqual(saved)
-    expect(db.filter).toBe('id=b1')
   })
 
   it.each(['INACTIVE', 'BLOCKED'])('signs out a %s broker', async (status) => {
-    db.result = { data: { id: 'b1', phone: '919876543210', status }, error: null }
+    sb.me = me(status)
+    await expect(authService.revalidate(saved)).resolves.toBeNull()
+    expect(authService.getStoredSession()).toBeNull()
+    expect(sb.signedOut).toBe(1)
+  })
+
+  it('signs out when the Supabase sign-in is gone', async () => {
+    sb.authSession = { data: { session: null }, error: null }
     await expect(authService.revalidate(saved)).resolves.toBeNull()
     expect(authService.getStoredSession()).toBeNull()
   })
 
-  it('signs out a broker who no longer exists', async () => {
+  it('signs out a broker whose account was removed', async () => {
+    sb.me = { data: [], error: null }
     await expect(authService.revalidate(saved)).resolves.toBeNull()
   })
 
-  it('signs out a saved session whose id is not a UUID', async () => {
-    db.result = { data: null, error: { code: '22P02', message: 'invalid input syntax for type uuid' } }
-    await expect(authService.revalidate(saved)).resolves.toBeNull()
-  })
-
-  it('stays signed in when offline', async () => {
-    db.result = { data: null, error: { message: 'fetch failed' } }
+  it('keeps the session when the token can’t be refreshed offline', async () => {
+    sb.authSession = { data: { session: null }, error: { retryable: true } }
     await expect(authService.revalidate(saved)).resolves.toEqual(saved)
     expect(authService.getStoredSession()).toEqual(saved)
+  })
+
+  it('keeps the session when the server can’t be reached', async () => {
+    sb.me = { data: null, error: { message: 'fetch failed' } }
+    await expect(authService.revalidate(saved)).resolves.toEqual(saved)
+    expect(authService.getStoredSession()).toEqual(saved)
+  })
+
+  it('updates the saved name when it changed', async () => {
+    sb.me = { data: [{ id: 'b1', phone: '919876543210', name: 'Ravi Homes', status: 'ACTIVE', subdomain: 'ravi' }], error: null }
+    const next = await authService.revalidate(saved)
+    expect(next?.user.name).toBe('Ravi Homes')
+    expect(authService.getStoredSession()).toEqual(next)
   })
 })

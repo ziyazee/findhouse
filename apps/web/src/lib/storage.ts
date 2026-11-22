@@ -1,4 +1,5 @@
 import { env } from './env'
+import { supabase } from './supabase'
 
 /** Cloudflare Pages function that writes to and deletes from the media bucket (functions/api/upload.ts). */
 const UPLOAD_API = '/api/upload'
@@ -26,15 +27,21 @@ export function newMediaKey(propertyId: string, fileName: string): string {
   return `${DASHBOARD_PREFIX}${propertyId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`
 }
 
+/** The upload API only accepts signed-in brokers, and only for their own properties. */
+async function authHeader(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession()
+  return data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {}
+}
+
 export async function uploadObject(key: string, file: File): Promise<void> {
   const form = new FormData()
   form.append('file', file)
   form.append('key', key)
-  const res = await fetch(UPLOAD_API, { method: 'POST', body: form })
+  const res = await fetch(UPLOAD_API, { method: 'POST', body: form, headers: await authHeader() })
   if (!res.ok) throw new Error((await res.text()) || `Upload failed (${res.status})`)
 }
 
 export async function deleteObject(key: string): Promise<void> {
-  const res = await fetch(`${UPLOAD_API}?key=${encodeURIComponent(key)}`, { method: 'DELETE' })
+  const res = await fetch(`${UPLOAD_API}?key=${encodeURIComponent(key)}`, { method: 'DELETE', headers: await authHeader() })
   if (!res.ok) throw new Error((await res.text()) || `Delete failed (${res.status})`)
 }

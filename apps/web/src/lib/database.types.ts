@@ -306,13 +306,13 @@ export type Database = {
         Args: { check_phone: string }
         Returns: string
       }
-      broker_register: {
-        Args: { reg_phone: string; reg_name: string; reg_password: string }
-        Returns: { outcome: string; id: string | null; phone: string | null; status: string | null; name: string | null; subdomain: string | null }[]
+      broker_me: {
+        Args: Record<string, never>
+        Returns: { id: string; phone: string; name: string | null; status: string; subdomain: string | null }[]
       }
-      broker_sign_in: {
-        Args: { login_phone: string; login_password: string }
-        Returns: { outcome: string; id: string | null; phone: string | null; status: string | null; name: string | null }[]
+      owns_property: {
+        Args: { pid: string }
+        Returns: boolean
       }
       get_listing_contact: {
         Args: { listing_id: string }
@@ -326,8 +326,8 @@ export type Database = {
         Args: { page_broker_id?: string; page_subdomain?: string }
         Returns: { id: string; name: string | null; phone: string; subdomain: string | null }[]
       }
-      set_broker_subdomain: {
-        Args: { page_broker_id: string; new_subdomain: string }
+      set_my_subdomain: {
+        Args: { new_subdomain: string }
         Returns: string
       }
     }

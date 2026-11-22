@@ -32,7 +32,7 @@ The review looked at the entire frontend, the upload function, and how the brows
 
 | # | Finding | Status |
 | --- | --- | --- |
-| C1 | **Sign-in is phone-number only and every query runs with the public (anon) key.** Anyone who knows a broker's number can sign in. Count-only probes against the live project confirmed the anon role can read `brokers`, `properties`, `whatsapp_submissions`, `whatsapp_submission_messages` and `property_media`. The UI's broker filter is the only isolation. | **Open, needs a backend change.** See [§7 Auth and RLS migration plan](#7-auth-and-rls-migration-plan). It can't be fixed in the frontend alone without breaking sign-in. |
+| C1 | **Sign-in is phone-number only and every query runs with the public (anon) key.** Anyone who knows a broker's number can sign in. Count-only probes against the live project confirmed the anon role can read `brokers`, `properties`, `whatsapp_submissions`, `whatsapp_submission_messages` and `property_media`. The UI's broker filter is the only isolation. | **Fixed** by migration 018 and Supabase Auth sign-in (see §7, "Password login and listing links"). The plan below is kept for reference. |
 | C2 | **The upload API accepted any key, type or size**, so anyone could overwrite or delete any object in the bucket, including WhatsApp originals. | **Mitigated.** Keys must match `properties/<uuid>/<safe-name>` (no `..`). Only `image/*` and `video/*` are accepted, up to 50 MB. `DELETE` uses the same key rule, so `submissions/` objects can't be touched. Unit tested. It is still unauthenticated; see C1. |
 | C3 | **Deleting a WhatsApp-sourced photo deleted the original message's media.** | **Fixed** on both sides: the client only deletes objects for dashboard uploads (`isDashboardUpload`), and the server rejects any other key. |
 
@@ -244,14 +244,17 @@ Each broker's public site is a subdomain of `findhouse.in`: `ravi-homes.findhous
 
 ### Password login and listing links
 
-- **Invite-only registration (migrations `016` and `017_invite_only_registration.sql`, run in that order):**
+- **Invite-only registration (migrations `016`, `017`, `018`, in that order):**
   1. FindHouse staff open `/admin`, sign in with the admin secret and add a broker's WhatsApp number. That creates the broker row.
   2. The broker opens `findhouse.in`, chooses **Register** and enters the number. `broker_register_check` says whether it was added. If not: "Your number is not applicable for onboarding."
-  3. If it was, they enter a name and a password (8 characters or more, typed twice). The name becomes the public site name: "Rubbing" gives `rubbing.findhouse.in`, and the page shows this as they type. `broker_register` rejects names that are reserved or taken.
-  4. After that they sign in with number and password (`broker_sign_in`). Hashes (bcrypt) live in `broker_credentials`, which the anon key can't read. A broker is "registered" when they have a row there. To reset a password, delete the row: they register again.
+  3. If it was, they enter a name and a password (8 characters or more, typed twice). The name becomes the public site name: "Rubbing" gives `rubbing.findhouse.in`, and the page shows this as they type.
+  4. `functions/api/auth/register.ts` (service key) creates a **Supabase Auth user** with the email `<phone>@brokers.findhouse.in` and the chosen password, then `broker_link_auth_user` attaches it to the broker row (`brokers.auth_user_id`) and saves the name and site name. If the name is reserved or taken, the auth user is deleted again.
+  5. The browser signs in with `supabase.auth.signInWithPassword`. Brokers sign in the same way afterwards. To reset a password, change or delete the user in Supabase → Authentication → Users; deleting it lets the broker register again.
+- **Real access control (C1 fixed):** every request now carries the broker's JWT. `current_broker_id()` maps it to the broker (only while `ACTIVE`), and row-level policies (migration 018) give each broker full control of their own `properties` and `property_media`, and read access to their own `whatsapp_submissions` and messages. The public key can read only `available` listings and their media; it can't write anything or read `brokers`. Public pages get broker details through `get_broker_page` and `get_listing_contact`. **Turn off "Allow new users to sign up"** in Supabase → Authentication, so accounts are created only by the register function.
+- **Upload API:** `/api/upload` requires the broker's token and calls `owns_property`, so a broker can add or delete files only under their own properties.
 - **Admin page:** `/admin` calls `functions/api/admin/brokers.ts`, which needs `Authorization: Bearer <ADMIN_SECRET>` and uses the Supabase service key. Set `ADMIN_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` as encrypted variables on the Pages project (the service key must never be a `VITE_` variable). It lists brokers and lets staff add, block, unblock, and remove numbers that haven't registered.
 - **WhatsApp webhook:** no longer creates brokers. A message from a number nobody added is ignored. Brokers added in the admin page can send listings straight away, even before they register on the website.
-- **Still the C1 model:** the session is kept in the browser and the database is still open to the anon key, so the password is not yet a real security boundary. There is also no limit on wrong passwords.
+- **Not done yet:** a limit on wrong-password attempts beyond Supabase's own, a "change password" screen, and removing the development-only pipeline page's direct table reads (it now sees only the signed-in broker's rows).
 - **Subdomain for every broker:** brokers are created from their first WhatsApp message, with no name. Migration 016 gives them `broker-<last 4 digits>` (made unique with -2, -3 …) until they pick a name in Settings → Public site.
 - **Listing links:** `<subdomain>.findhouse.in/<shortId>/<name>`, for example `ravi-homes.findhouse.in/k3f9x2ab/2-bhk-in-andheri`. `properties.short_id` is 8 characters, filled by a trigger. Only the short id finds the listing; the name is decoration, so renaming a listing never breaks a link. Older `/p/<slug>` and `/<uuid>` links still work. `listingPath` (`lib/siteUrls.ts`) and `listingUrl` in `process-submission` build the path; keep the two in step. `functions/[shortId]/[name].ts` adds the link-preview tags for the new path.
 
@@ -311,8 +314,6 @@ What the tests cover:
 
 | Item | Why it matters | Suggested fix |
 | --- | --- | --- |
-| C1: phone-only login, anon database access | Data from every broker can be read with the public key | §7 |
-| Upload API is unauthenticated | Anyone can add files under `properties/` | JWT and ownership check (§7, step 4) |
 | R2 objects remain after a property is deleted | Storage cost; files stay reachable by URL | Edge function or database trigger that deletes `properties/<id>/` |
 | Full-size images as thumbnails | Slow grids on mobile data | Cloudflare Image Resizing or pre-generated sizes |
 | Hand-written `database.types.ts` | Can drift from the schema | `supabase gen types typescript` in CI |

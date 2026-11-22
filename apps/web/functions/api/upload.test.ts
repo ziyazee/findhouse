@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { isAllowedKey, isAllowedType } from './upload'
+import { isAllowedKey, isAllowedType, propertyIdOf } from './upload'
 
 const id = '3f2b8c1e-9a4d-4e2f-8b7a-1c2d3e4f5a6b'
 
 describe('upload key rules', () => {
+  it('finds the property a key belongs to', () => {
+    expect(propertyIdOf(`properties/${id}/1732000000000-ab12cd34.jpg`)).toBe(id)
+  })
+
   it('accepts dashboard uploads for a property', () => {
     expect(isAllowedKey(`properties/${id}/1732000000000-ab12cd34.jpg`)).toBe(true)
   })

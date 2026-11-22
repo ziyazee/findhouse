@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { authService } from '@/modules/auth/AuthService'
+import { supabase } from '@/lib/supabase'
+import { authService, clearStoredSession } from '@/modules/auth/AuthService'
 import { useAuthStore } from '@/modules/auth/AuthStore'
 import { Toaster } from '@/shared/components/Toast'
 import { toast } from '@/shared/components/toastStore'
@@ -25,8 +26,22 @@ function useRevalidateSession() {
   }, [])
 }
 
+/** If Supabase ends the sign-in (token can't be refreshed, signed out in another tab), the workspace follows. */
+function useFollowSupabaseSignOut() {
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT' || !useAuthStore.getState().session) return
+      clearStoredSession()
+      queryClient.clear()
+      useAuthStore.getState().setSession(null)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [])
+}
+
 export function App() {
   useRevalidateSession()
+  useFollowSupabaseSignOut()
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} future={{ v7_startTransition: true }} />

@@ -52,12 +52,11 @@ export interface BrokerRow {
   status: string
   plan: string
   created_at: string
-  broker_credentials: { broker_id: string } | { broker_id: string }[] | null
+  auth_user_id: string | null
 }
 
 /** What the admin page shows for a broker. */
 export function toAdminBroker(row: BrokerRow) {
-  const creds = row.broker_credentials
   return {
     id: row.id,
     phone: row.phone,
@@ -66,7 +65,7 @@ export function toAdminBroker(row: BrokerRow) {
     status: row.status,
     plan: row.plan,
     createdAt: row.created_at,
-    registered: Array.isArray(creds) ? creds.length > 0 : creds != null,
+    registered: row.auth_user_id != null,
   }
 }
 
@@ -96,7 +95,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     if (request.method === 'GET') {
-      const res = await db('brokers?select=id,phone,name,subdomain,status,plan,created_at,broker_credentials(broker_id)&order=created_at.desc')
+      const res = await db('brokers?select=id,phone,name,subdomain,status,plan,created_at,auth_user_id&order=created_at.desc')
       if (!res.ok) return failed(res)
       return json({ brokers: ((await res.json()) as BrokerRow[]).map(toAdminBroker) })
     }
@@ -121,11 +120,11 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
     if (request.method === 'DELETE') {
       const id = new URL(request.url).searchParams.get('id')
       if (!id) return json({ error: 'Invalid request.' }, 400)
-      const found = await db(`brokers?select=id,broker_credentials(broker_id)&id=eq.${encodeURIComponent(id)}`)
+      const found = await db(`brokers?select=id,auth_user_id&id=eq.${encodeURIComponent(id)}`)
       if (!found.ok) return failed(found)
-      const [row] = (await found.json()) as Pick<BrokerRow, 'id' | 'broker_credentials'>[]
+      const [row] = (await found.json()) as Pick<BrokerRow, 'id' | 'auth_user_id'>[]
       if (!row) return json({ error: 'No such broker.' }, 404)
-      if (toAdminBroker({ ...row, phone: '', name: null, subdomain: null, status: '', plan: '', created_at: '' }).registered) {
+      if (row.auth_user_id) {
         return json({ error: 'This broker has registered. Block them instead of removing.' }, 409)
       }
       const res = await db(`brokers?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } })

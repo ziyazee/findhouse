@@ -33,7 +33,7 @@ export function useSetSubdomain() {
   return useMutation({
     mutationFn: (subdomain: string) => {
       if (!user) throw new Error('You’re signed out. Sign in again to change your site name.')
-      return brokerService.setSubdomain(user.id, subdomain)
+      return brokerService.setSubdomain(subdomain)
     },
     onSuccess: (subdomain) => {
       if (!user) return

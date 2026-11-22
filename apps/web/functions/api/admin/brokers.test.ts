@@ -30,14 +30,12 @@ describe('parseNewNumber', () => {
 describe('toAdminBroker', () => {
   const row: BrokerRow = {
     id: 'b1', phone: '919876543210', name: ' Rubbing ', subdomain: 'rubbing', status: 'ACTIVE', plan: 'trial',
-    created_at: '2026-11-23T00:00:00Z', broker_credentials: null,
+    created_at: '2026-11-23T00:00:00Z', auth_user_id: null,
   }
 
-  it('marks a broker registered once they have a password', () => {
+  it('marks a broker registered once they have a login', () => {
     expect(toAdminBroker(row).registered).toBe(false)
-    expect(toAdminBroker({ ...row, broker_credentials: { broker_id: 'b1' } }).registered).toBe(true)
-    expect(toAdminBroker({ ...row, broker_credentials: [{ broker_id: 'b1' }] }).registered).toBe(true)
-    expect(toAdminBroker({ ...row, broker_credentials: [] }).registered).toBe(false)
+    expect(toAdminBroker({ ...row, auth_user_id: 'u1' }).registered).toBe(true)
   })
 
   it('trims the name and leaves it empty when there is none', () => {

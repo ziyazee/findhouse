@@ -42,14 +42,14 @@ describe('brokerService.getProfile', () => {
 describe('brokerService.setSubdomain', () => {
   it('explains a taken or reserved name', async () => {
     db.result = { data: null, error: { code: '23505', message: 'duplicate key' } }
-    await expect(brokerService.setSubdomain('b1', 'ravi')).rejects.toThrow(SubdomainError)
-    await expect(brokerService.setSubdomain('b1', 'ravi')).rejects.toThrow(/already has that name/)
+    await expect(brokerService.setSubdomain('ravi')).rejects.toThrow(SubdomainError)
+    await expect(brokerService.setSubdomain('ravi')).rejects.toThrow(/already has that name/)
     db.result = { data: null, error: { code: '22023', message: 'reserved' } }
-    await expect(brokerService.setSubdomain('b1', 'admin')).rejects.toThrow(/reserved/)
+    await expect(brokerService.setSubdomain('admin')).rejects.toThrow(/reserved/)
   })
 
   it('returns the saved name', async () => {
     db.result = { data: 'ravi-homes', error: null }
-    expect(await brokerService.setSubdomain('b1', 'ravi-homes')).toBe('ravi-homes')
+    expect(await brokerService.setSubdomain('ravi-homes')).toBe('ravi-homes')
   })
 })
