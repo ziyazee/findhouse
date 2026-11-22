@@ -39,6 +39,18 @@ export function parseRegistration(body: unknown): Registration | { code: string 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
+/** A short, safe description of what the database or Auth answered, so a failure can be traced. */
+function why(step: string, status: number | null, text = ''): string {
+  if (status === null) return `${step}: no response`
+  let message = text
+  try {
+    const body = JSON.parse(text) as { message?: string; msg?: string; error_description?: string }
+    message = body.message ?? body.msg ?? body.error_description ?? text
+  } catch { /* not JSON */ }
+  console.error(`[register] ${step} failed: ${status} ${text}`)
+  return `${step} (${status}): ${message.slice(0, 160)}`
+}
+
 const REFUSALS: Record<string, number> = {
   not_invited: 403, not_active: 403, already_registered: 409, name_taken: 409,
 }
@@ -60,7 +72,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
     // 1. Only numbers FindHouse added, and not twice.
     const check = await rpc('broker_register_check', { check_phone: parsed.phone })
-    if (!check.ok) return json({ code: 'unavailable' }, 500)
+    if (!check.ok) return json({ code: 'unavailable', detail: why('check', check.status, await check.text()) }, 500)
     const status = (await check.json()) as string
     if (status !== 'invited') return json({ code: status }, REFUSALS[status] ?? 403)
 
@@ -70,21 +82,25 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       body: JSON.stringify({ email: brokerEmail(parsed.phone), password: parsed.password, email_confirm: true }),
     })
     if (!created.ok) {
-      const err = (await created.json().catch(() => ({}))) as { error_code?: string }
-      return err.error_code === 'email_exists' ? json({ code: 'already_registered' }, 409) : json({ code: 'unavailable' }, 500)
+      const raw = await created.text()
+      const err = (() => { try { return JSON.parse(raw) as { error_code?: string } } catch { return {} as { error_code?: string } } })()
+      if (err.error_code === 'email_exists') return json({ code: 'already_registered' }, 409)
+      return json({ code: 'unavailable', detail: why('create login', created.status, raw) }, 500)
     }
     const user = (await created.json()) as { id: string }
 
     // 3. Attach it to the broker and save the name and site name. If that is refused, undo the login.
     const link = await rpc('broker_link_auth_user', { reg_phone: parsed.phone, reg_user_id: user.id, reg_name: parsed.name })
-    const outcome = link.ok ? ((await link.json()) as string) : 'unavailable'
+    const linkText = await link.text()
+    const outcome = link.ok ? (JSON.parse(linkText) as string) : 'unavailable'
     if (outcome !== 'registered') {
       await call(`/auth/v1/admin/users/${user.id}`, { method: 'DELETE' })
-      return json({ code: outcome }, REFUSALS[outcome] ?? (outcome === 'unavailable' ? 500 : 400))
+      if (outcome === 'unavailable') return json({ code: 'unavailable', detail: why('link', link.status, linkText) }, 500)
+      return json({ code: outcome }, REFUSALS[outcome] ?? 400)
     }
     return json({ ok: true, subdomain: subdomainFromName(parsed.name) }, 201)
   } catch (err) {
     console.error('[register] failed', err)
-    return json({ code: 'unavailable' }, 500)
+    return json({ code: 'unavailable', detail: `error: ${err instanceof Error ? err.message : 'unknown'}` }, 500)
   }
 }

@@ -111,8 +111,9 @@ class SupabaseAuthService implements IAuthService {
       throw new AuthError(NETWORK_ERROR)
     }
     if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { code?: string } | null
-      throw new AuthError(registerMessage(body?.code))
+      const body = (await res.json().catch(() => null)) as { code?: string; detail?: string } | null
+      const message = registerMessage(body?.code)
+      throw new AuthError(body?.detail ? `${message} (${body.detail})` : message)
     }
     return this.login({ phone, password })
   }
