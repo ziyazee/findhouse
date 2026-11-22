@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { brokerSiteUrl, listingPath, listingSiteUrl, mainOrigin, nameSlug, normalizeSubdomain, subdomainOf, subdomainProblem } from './siteUrls'
+import { brokerSiteUrl, listingPath, listingSiteUrl, mainOrigin, nameSlug, normalizeSubdomain, subdomainFromName, subdomainOf, subdomainProblem } from './siteUrls'
 
 const live = { protocol: 'https:', hostname: 'findhouse.in', port: '', domain: 'findhouse.in' }
 const onSite = { ...live, hostname: 'ravi-homes.findhouse.in' }
@@ -39,6 +39,12 @@ describe('subdomains', () => {
     expect(mainOrigin(onSite)).toBe('https://findhouse.in')
     expect(mainOrigin(live)).toBe('https://findhouse.in')
     expect(mainOrigin({ ...dev, hostname: 'ravi.localhost' })).toBe('http://localhost:5173')
+  })
+
+  it('makes the site name from the broker name', () => {
+    expect(subdomainFromName('Rubbing')).toBe('rubbing')
+    expect(subdomainFromName('  Ravi Kumar & Co. ')).toBe('ravi-kumar-co')
+    expect(subdomainFromName('!!')).toBe('')
   })
 
   it('checks what a broker types', () => {

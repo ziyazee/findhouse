@@ -20,6 +20,11 @@ export function normalizeSubdomain(input: string): string {
   return input.trim().toLowerCase().replace(/[\s_]+/g, '-')
 }
 
+/** The site name a broker's name makes: "Ravi Kumar Realty" → "ravi-kumar-realty". Keep in step with subdomain_from_name in migration 017. */
+export function subdomainFromName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
 /** Why a subdomain can't be used, in words for the broker; null when it can. */
 export function subdomainProblem(value: string): string | null {
   if (value.length < SUBDOMAIN_MIN) return `Use at least ${SUBDOMAIN_MIN} characters.`

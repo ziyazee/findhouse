@@ -105,11 +105,11 @@ async function handleMessage(msg: WAMessage) {
 
   console.log(`[webhook] Message from ${fromNumber} — type: ${msg.type}, id: ${msg.id}`)
 
-  // ── 1. Resolve broker (upsert on first contact) ───────────────────────────
+  // ── 1. Resolve broker (invite-only: numbers added in the admin page) ──────
   const broker = await resolveBroker(db, fromNumber)
 
   if (!broker) {
-    console.error(`[webhook] Could not resolve broker for ${fromNumber}`)
+    console.log(`[webhook] ${fromNumber} is not a registered broker — message ignored`)
     return
   }
 

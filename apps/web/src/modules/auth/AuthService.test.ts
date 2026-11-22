@@ -68,15 +68,10 @@ describe('authService.login', () => {
     expect(authService.getStoredSession()).toEqual(session)
   })
 
-  it('signs in on first login, when the password is saved', async () => {
-    db.rpc = signIn('password_set', broker)
-    await expect(authService.login({ phone: '9876543210', password: 'brand-new-pass' })).resolves.toBeTruthy()
-  })
-
   it.each([
     ['wrong_password', /wrong password/i],
-    ['weak_password', /at least 8/],
-    ['no_account', /no broker account/i],
+    ['not_registered', /Register tab/],
+    ['no_account', /isn’t registered/],
   ])('refuses %s without saving a session', async (outcome, message) => {
     db.rpc = signIn(outcome)
     await expect(authService.login({ phone: '9876543210', password: 'x' })).rejects.toThrow(message)
@@ -92,6 +87,50 @@ describe('authService.login', () => {
   it('reports a connection problem instead of "no account"', async () => {
     db.rpc = { data: null, error: { message: 'fetch failed' } }
     await expect(authService.login({ phone: '9876543210', password: 'whatever-pass' })).rejects.toThrow(/reach FindHouse/)
+  })
+})
+
+describe('authService.checkRegistration', () => {
+  it('asks about the normalized number and passes the answer on', async () => {
+    db.rpc = { data: 'invited', error: null }
+    await expect(authService.checkRegistration('+91 98765 43210')).resolves.toBe('invited')
+    expect(db.rpcArgs).toEqual({ check_phone: '919876543210' })
+  })
+
+  it('treats an unknown answer as not invited', async () => {
+    db.rpc = { data: 'something-new', error: null }
+    await expect(authService.checkRegistration('9876543210')).resolves.toBe('not_invited')
+  })
+
+  it('reports a connection problem', async () => {
+    db.rpc = { data: null, error: { message: 'fetch failed' } }
+    await expect(authService.checkRegistration('9876543210')).rejects.toThrow(/reach FindHouse/)
+  })
+})
+
+describe('authService.register', () => {
+  beforeEach(() => store.clear())
+  const input = { phone: '98765 43210', name: '  Rubbing ', password: 'long-enough-pass' }
+
+  it('sends the number, trimmed name and password, and saves the session', async () => {
+    db.rpc = signIn('registered', { ...broker, name: 'Rubbing', subdomain: 'rubbing' })
+    const session = await authService.register(input)
+    expect(db.rpcArgs).toEqual({ reg_phone: '919876543210', reg_name: 'Rubbing', reg_password: 'long-enough-pass' })
+    expect(session.user.name).toBe('Rubbing')
+    expect(authService.getStoredSession()).toEqual(session)
+  })
+
+  it.each([
+    ['not_invited', /not applicable for onboarding/],
+    ['already_registered', /already registered/],
+    ['weak_password', /at least 8/],
+    ['invalid_name', /3 to 32/],
+    ['name_reserved', /reserved/],
+    ['name_taken', /already uses that name/],
+  ])('refuses %s without saving a session', async (outcome, message) => {
+    db.rpc = signIn(outcome)
+    await expect(authService.register(input)).rejects.toThrow(message)
+    expect(authService.getStoredSession()).toBeNull()
   })
 })
 

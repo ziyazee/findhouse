@@ -9,6 +9,8 @@ import { RouteError } from './RouteError'
 import { ToMainSite } from './ToMainSite'
 
 const LoginPage        = lazy(() => import('@/modules/auth/pages/LoginPage'))
+const RegisterPage     = lazy(() => import('@/modules/auth/pages/RegisterPage'))
+const AdminPage        = lazy(() => import('@/modules/admin/AdminPage'))
 const PropertySitePage = lazy(() => import('@/modules/property-site/PropertySitePage'))
 const BrokerSitePage   = lazy(() => import('@/modules/broker-site/BrokerSitePage'))
 const DashboardPage    = lazy(brokerPages.dashboard)
@@ -36,6 +38,10 @@ const routes: RouteObject[] = [
 
   // Guest only
   { path: '/login', element: guestLogin },
+  { path: '/register', element: <GuestRoute>{withSuspense(<RegisterPage />)}</GuestRoute> },
+
+  // FindHouse staff: adds the numbers brokers may register with. Has its own sign-in (an admin secret).
+  { path: '/admin', element: withSuspense(<AdminPage />) },
 
   // Broker workspace: the shell stays mounted and only the page inside it changes
   {

@@ -1,4 +1,4 @@
-import type { AuthSession, LoginInput } from './auth.types'
+import type { AuthSession, LoginInput, RegisterInput, RegistrationStatus } from './auth.types'
 import { AuthError, PASSWORD_MIN } from './auth.types'
 import { normalizePhone } from './phone'
 import { supabase } from '@/lib/supabase'
@@ -7,8 +7,17 @@ const SESSION_KEY = 'findhouse_broker_session'
 /** Postgres "invalid input syntax" — a saved id that isn't a UUID can't belong to any broker. */
 const INVALID_ID = '22P02'
 
+const NETWORK_ERROR = 'Couldn’t reach FindHouse. Check your connection and try again.'
+const GENERIC_ERROR = 'Something went wrong. Please try again.'
+/** Shown when a number hasn't been added by FindHouse. */
+export const NOT_INVITED = 'Your number is not applicable for onboarding.'
+const REGISTRATION_STATUSES: readonly RegistrationStatus[] = ['invited', 'not_invited', 'not_active', 'already_registered']
+
 export interface IAuthService {
   login(input: LoginInput): Promise<AuthSession>
+  /** Whether FindHouse has added this number, and whether its broker has already registered. */
+  checkRegistration(phone: string): Promise<RegistrationStatus>
+  register(input: RegisterInput): Promise<AuthSession>
   logout(): Promise<void>
   /** The session saved on this device, without checking it. */
   getStoredSession(): AuthSession | null
@@ -27,36 +36,78 @@ export function brokerAccessError(status: string): string | null {
 }
 
 class PhoneAuthService implements IAuthService {
-  /**
-   * Checks the password on the server. A broker with no password yet (first login) gets the one they typed saved
-   * as their password, so this is also how an account is set up.
-   */
   async login({ phone, password }: LoginInput): Promise<AuthSession> {
     const { data, error } = await supabase.rpc('broker_sign_in', {
       login_phone: normalizePhone(phone),
       login_password: password,
     })
 
-    if (error) throw new AuthError('Couldn’t reach FindHouse. Check your connection and try again.')
+    if (error) throw new AuthError(NETWORK_ERROR)
     const row = data?.[0]
-    if (!row) throw new AuthError('Couldn’t sign you in. Please try again.')
+    if (!row) throw new AuthError(GENERIC_ERROR)
 
     switch (row.outcome) {
       case 'ok':
-      case 'password_set':
         break
       case 'no_account':
-        throw new AuthError('No broker account found for this phone number. Send a message to our WhatsApp number to create one.')
+        throw new AuthError('This number isn’t registered with FindHouse.')
+      case 'not_registered':
+        throw new AuthError('You haven’t finished registering yet. Use the Register tab to set your name and password.')
       case 'wrong_password':
         throw new AuthError('Wrong password. Try again.')
-      case 'weak_password':
-        throw new AuthError(`Choose a password of at least ${PASSWORD_MIN} characters.`)
       case 'not_active':
         throw new AuthError(brokerAccessError(row.status ?? '') ?? 'This account is inactive.')
       default:
-        throw new AuthError('Couldn’t sign you in. Please try again.')
+        throw new AuthError(GENERIC_ERROR)
     }
-    if (!row.id || !row.phone) throw new AuthError('Couldn’t sign you in. Please try again.')
+    if (!row.id || !row.phone) throw new AuthError(GENERIC_ERROR)
+
+    const session: AuthSession = {
+      user: { id: row.id, phone: row.phone, name: row.name, role: 'broker' },
+    }
+    this.save(session)
+    return session
+  }
+
+  async checkRegistration(phone: string): Promise<RegistrationStatus> {
+    const { data, error } = await supabase.rpc('broker_register_check', { check_phone: normalizePhone(phone) })
+    if (error) throw new AuthError(NETWORK_ERROR)
+    return REGISTRATION_STATUSES.includes(data as RegistrationStatus) ? (data as RegistrationStatus) : 'not_invited'
+  }
+
+  /** Saves the broker's name and password (and the site name made from the name) and signs them in. */
+  async register({ phone, name, password }: RegisterInput): Promise<AuthSession> {
+    const { data, error } = await supabase.rpc('broker_register', {
+      reg_phone: normalizePhone(phone),
+      reg_name: name.trim(),
+      reg_password: password,
+    })
+
+    if (error) throw new AuthError(NETWORK_ERROR)
+    const row = data?.[0]
+    if (!row) throw new AuthError(GENERIC_ERROR)
+
+    switch (row.outcome) {
+      case 'registered':
+        break
+      case 'not_invited':
+        throw new AuthError(NOT_INVITED)
+      case 'not_active':
+        throw new AuthError(brokerAccessError(row.status ?? 'INACTIVE') ?? 'This account is inactive.')
+      case 'already_registered':
+        throw new AuthError('This number is already registered. Sign in instead.')
+      case 'weak_password':
+        throw new AuthError(`Choose a password of at least ${PASSWORD_MIN} characters.`)
+      case 'invalid_name':
+        throw new AuthError('Use a name of 3 to 32 letters or numbers. It becomes your public page address.')
+      case 'name_reserved':
+        throw new AuthError('That name is reserved for FindHouse. Try another.')
+      case 'name_taken':
+        throw new AuthError('Another broker already uses that name. Try another.')
+      default:
+        throw new AuthError(GENERIC_ERROR)
+    }
+    if (!row.id || !row.phone) throw new AuthError(GENERIC_ERROR)
 
     const session: AuthSession = {
       user: { id: row.id, phone: row.phone, name: row.name, role: 'broker' },

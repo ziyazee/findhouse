@@ -46,3 +46,31 @@
   flex-shrink: 0;
   margin-top: 1px;
 }
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 24px;
+  padding: 4px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.tab {
+  padding: 9px 12px;
+  text-align: center;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-fg2);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+.tab:hover { color: var(--color-fg); }
+.tabActive { color: var(--color-fg); background: var(--color-surface); box-shadow: var(--shadow-xs); }
+
+.fieldNote { margin: -8px 0 0; font-size: 12px; line-height: 1.5; color: var(--color-fg3); }
+.sitePreview { color: var(--color-accent); font-weight: 600; word-break: break-all; }
+.stepPhone { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: var(--text-base); color: var(--color-fg2); }
+.linkButton { padding: 0; font: inherit; font-weight: 600; color: var(--color-accent); background: none; border: 0; cursor: pointer; }
+.linkButton:hover { text-decoration: underline; }

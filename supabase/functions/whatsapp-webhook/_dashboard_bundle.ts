@@ -192,13 +192,11 @@ async function uploadToR2(key: string, body: Uint8Array, contentType: string): P
 
 // ── Broker manager ────────────────────────────────────────────────────────────
 
+/** Invite-only: finds the broker FindHouse added in the admin page. A number nobody added is null and is ignored. */
 async function resolveBroker(db: SupabaseClient, phone: string): Promise<ResolvedBroker | null> {
-  const { error: upsertError } = await db
-    .from('brokers')
-    .upsert({ phone, status: 'ACTIVE' }, { onConflict: 'phone', ignoreDuplicates: true })
-  if (upsertError) throw new Error(`[brokerManager] Upsert failed for ${phone}: ${upsertError.message}`)
-  const { data, error: selectError } = await db.from('brokers').select('id, status, plan, trial_used_at').eq('phone', phone).single()
-  if (selectError || !data) { console.error(`[brokerManager] Could not read broker for ${phone}:`, selectError?.message); return null }
+  const { data, error: selectError } = await db.from('brokers').select('id, status, plan, trial_used_at').eq('phone', phone).maybeSingle()
+  if (selectError) throw new Error(`[brokerManager] Could not read broker for ${phone}: ${selectError.message}`)
+  if (!data) return null
   return {
     id: data.id as string,
     status: data.status as BrokerStatus,
@@ -356,7 +354,7 @@ async function handleMessage(msg: WAMessage) {
   console.log(`[webhook] Message from ${fromNumber} — type: ${msg.type}, id: ${msg.id}`)
 
   const broker = await resolveBroker(db, fromNumber)
-  if (!broker) { console.error(`[webhook] Could not resolve broker for ${fromNumber}`); return }
+  if (!broker) { console.log(`[webhook] ${fromNumber} is not a registered broker — message ignored`); return }
   if (broker.status !== 'ACTIVE') { console.log(`[webhook] Broker ${fromNumber} is ${broker.status} — message rejected`); return }
   const brokerId: string = broker.id
 

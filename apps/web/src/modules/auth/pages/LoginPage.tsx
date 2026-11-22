@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthLayout } from '../components/AuthLayout'
+import { AuthTabs } from '../components/AuthTabs'
 import { Input } from '@/shared/components/Input'
 import { Button } from '@/shared/components/Button'
 import { useAuth } from '../useAuth'
@@ -57,6 +58,7 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
+      <AuthTabs />
       <div className={styles.formHeader}>
         <h1 className={styles.title}>Welcome back</h1>
         <p className={styles.subtitle}>Sign in with your WhatsApp number and password.</p>
@@ -102,9 +104,6 @@ export default function LoginPage() {
             }}
             autoComplete="current-password"
           />
-          <p className={styles.phoneHint}>
-            First time here? Choose a password (at least 8 characters) and it’s saved when you sign in.
-          </p>
         </div>
 
         <Button type="submit" fullWidth size="lg" loading={loading}>
@@ -115,7 +114,7 @@ export default function LoginPage() {
       <div className={styles.adminNote}>
         <WhatsAppIcon />
         <span>
-          New here? Send a message to our WhatsApp number and your account is created automatically.
+          New here? Ask FindHouse to add your WhatsApp number, then use the Register tab.
         </span>
       </div>
     </AuthLayout>

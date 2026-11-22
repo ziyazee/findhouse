@@ -302,6 +302,14 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      broker_register_check: {
+        Args: { check_phone: string }
+        Returns: string
+      }
+      broker_register: {
+        Args: { reg_phone: string; reg_name: string; reg_password: string }
+        Returns: { outcome: string; id: string | null; phone: string | null; status: string | null; name: string | null; subdomain: string | null }[]
+      }
       broker_sign_in: {
         Args: { login_phone: string; login_password: string }
         Returns: { outcome: string; id: string | null; phone: string | null; status: string | null; name: string | null }[]

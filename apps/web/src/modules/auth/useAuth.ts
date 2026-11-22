@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from './AuthStore'
 import { authService } from './AuthService'
-import type { LoginInput } from './auth.types'
+import type { LoginInput, RegisterInput } from './auth.types'
 
 export function useAuth() {
   const session = useAuthStore((s) => s.session)
@@ -15,7 +15,13 @@ export function useAuth() {
     return newSession
   }, [])
 
-  return { session, user, role: user?.role ?? null, isAuthenticated: session !== null, login }
+  const register = useCallback(async (input: RegisterInput) => {
+    const newSession = await authService.register(input)
+    useAuthStore.getState().setSession(newSession)
+    return newSession
+  }, [])
+
+  return { session, user, role: user?.role ?? null, isAuthenticated: session !== null, login, register }
 }
 
 /** Signs out, drops every cached query so the next broker starts clean, and goes to the login page. */
