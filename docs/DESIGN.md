@@ -4,7 +4,7 @@ This is how the FindHouse web app looks and moves, and how to build new screens 
 
 The workspace aims to feel calm and premium for brokers who work from their phone between site visits. It uses deep brand colours, generous white space, soft tinted tiles and gentle motion. The public listing page is designed as a property brochure rather than a dashboard: a full-bleed photo, a floating summary card, and a contact bar that is always within reach.
 
----
+----
 
 ## 1. Tokens
 
