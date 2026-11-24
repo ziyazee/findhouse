@@ -79,6 +79,19 @@
 .stepText { display: block; font-size: var(--text-sm); color: var(--color-fg2); }
 
 .footnote { font-size: var(--text-sm); color: var(--color-fg3); }
+.footnote a { color: inherit; }
+
+.legal { display: none; }
+
+@media (max-width: 900px) {
+  .legal {
+    display: block;
+    margin-top: 28px;
+    font-size: var(--text-sm);
+    text-align: center;
+  }
+  .legal a { color: var(--color-fg3); }
+}
 
 .formPanel {
   flex: 1 1 50%;

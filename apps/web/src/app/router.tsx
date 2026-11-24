@@ -10,6 +10,7 @@ import { ToMainSite } from './ToMainSite'
 
 const LoginPage        = lazy(() => import('@/modules/auth/pages/LoginPage'))
 const RegisterPage     = lazy(() => import('@/modules/auth/pages/RegisterPage'))
+const PrivacyPage      = lazy(() => import('@/modules/legal/PrivacyPage'))
 const AdminPage        = lazy(() => import('@/modules/admin/AdminPage'))
 const PropertySitePage = lazy(() => import('@/modules/property-site/PropertySitePage'))
 const BrokerSitePage   = lazy(() => import('@/modules/broker-site/BrokerSitePage'))
@@ -39,6 +40,8 @@ const routes: RouteObject[] = [
   // Guest only
   { path: '/login', element: guestLogin },
   { path: '/register', element: <GuestRoute>{withSuspense(<RegisterPage />)}</GuestRoute> },
+  // Static path, so it is not treated as a listing short id.
+  { path: '/privacy', element: withSuspense(<PrivacyPage />) },
 
   // FindHouse staff: adds the numbers brokers may register with. Has its own sign-in (an admin secret).
   { path: '/admin', element: withSuspense(<AdminPage />) },

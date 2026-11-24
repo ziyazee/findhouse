@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Camera, Link2, Send } from 'lucide-react'
 import logoMark from '@/assets/logo-mark.png'
 import styles from './AuthLayout.module.css'
@@ -42,7 +43,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             </ol>
           </div>
 
-          <p className={styles.footnote}>© FindHouse</p>
+          <p className={styles.footnote}>© FindHouse · <Link to="/privacy">Privacy</Link></p>
         </div>
       </aside>
 
@@ -54,6 +55,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           </div>
 
           {children}
+          <p className={styles.legal}><Link to="/privacy">Privacy policy</Link></p>
         </div>
       </main>
     </div>
