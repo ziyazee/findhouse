@@ -16,7 +16,12 @@ export default {
     // edge and in the visitor's browser for good. Everything else is fetched as before.
     if (url.pathname.startsWith('/assets/')) {
       const res = await fetch(new Request(upstream, request), { cf: { cacheEverything: true, cacheTtl: 31536000 } })
-      if (!res.ok) return res
+      // A file that doesn't exist (an old tab asking for a chunk from a previous deploy) comes back from Pages as the
+      // app's index.html with a 200. Caching that for a year would break the real file's URL; answer 404 and keep it out of every cache.
+      const type = res.headers.get('content-type') || ''
+      if (!res.ok || type.includes('text/html')) {
+        return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } })
+      }
       const cached = new Response(res.body, res)
       cached.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
       return cached
