@@ -67,7 +67,7 @@ export function PropertyForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const title = form.title.trim() || suggestedTitle
-    if (!title) { setTitleError('Add a title, or pick bedrooms or a locality and we’ll write one.'); return }
+    if (!title) { setTitleError('Add a title, or pick bedrooms and we’ll write one.'); return }
     const problem = extrasProblem(form.extras)
     if (problem) { setError(problem); return }
 
@@ -82,44 +82,70 @@ export function PropertyForm({
     <motion.form className={styles.form} onSubmit={handleSubmit} noValidate variants={stagger(0.07, 0.15)} initial={entranceInitial} animate="show">
       <div className={styles.columns}>
         <div className={styles.column}>
-          <Section className={styles.basics} icon={<FileText size={18} />} tint="mint" title="Basics">
-            <div className={styles.toggle} role="group" aria-label="Listing type">
-              {(['rent', 'sale'] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  aria-pressed={form.listingType === v}
-                  className={`${styles.toggleBtn} ${form.listingType === v ? styles.toggleActive : ''}`}
-                  onClick={() => set('listingType', v)}
-                >
-                  {v === 'sale' ? 'For sale' : 'For rent'}
-                </button>
-              ))}
-            </div>
+          <Section
+            className={styles.basics}
+            icon={<FileText size={18} />}
+            tint="mint"
+            title="Basics"
+            meta={
+              <div className={`${styles.toggle} ${styles.toggleCompact}`} role="group" aria-label="Listing type">
+                {(['rent', 'sale'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={form.listingType === v}
+                    className={`${styles.toggleBtn} ${form.listingType === v ? styles.toggleActive : ''}`}
+                    onClick={() => set('listingType', v)}
+                  >
+                    {form.listingType === v && (
+                      <motion.span layoutId="listing-type-pill" className={styles.togglePill} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+                    )}
+                    <span className={styles.toggleLabel}>{v === 'sale' ? 'For sale' : 'For rent'}</span>
+                  </button>
+                ))}
+              </div>
+            }
+          >
             <Choices
               label="Property type"
               options={PROPERTY_TYPES}
+              oneLine
               value={form.propertyType}
               onChange={(v) => set('propertyType', v || form.propertyType)}
             />
-            <Input
-              label="Title"
-              value={form.title}
-              onChange={(e) => set('title', e.target.value)}
-              placeholder={suggestedTitle || 'e.g. Spacious 3BHK in Bandra West'}
-              hint={!form.title && suggestedTitle ? 'Leave blank to use the suggested title.' : undefined}
-              error={titleError}
-            />
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="property-title">Title</label>
+              <textarea
+                id="property-title"
+                name="title"
+                className={`${styles.textarea} ${styles.titleArea}`}
+                rows={2}
+                value={form.title}
+                onChange={(e) => set('title', e.target.value.replace(/\n/g, ' '))}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+                placeholder={suggestedTitle || 'e.g. Spacious 3BHK in Bandra West'}
+                aria-invalid={!!titleError}
+                aria-describedby="property-title-note"
+              />
+              {titleError && <p id="property-title-note" className={styles.titleError} role="alert">{titleError}</p>}
+              {!titleError && !form.title && suggestedTitle && <p id="property-title-note" className={styles.titleHint}>Leave blank to use the suggested title.</p>}
+            </div>
           </Section>
 
           <Section className={styles.location} icon={<MapPin size={18} />} tint="green" title={isRent ? 'Location and rent' : 'Location and price'}>
-            <div className={styles.grid2}>
-              <Input
-                label="Locality"
-                value={form.locality}
-                onChange={(e) => set('locality', e.target.value)}
-                placeholder="e.g. Bandra West"
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="property-address">Address</label>
+              <textarea
+                id="property-address"
+                name="address"
+                className={`${styles.textarea} ${styles.titleArea}`}
+                rows={2}
+                value={form.location}
+                onChange={(e) => set('location', e.target.value)}
+                placeholder="e.g. 14 Sea View Apts, Carter Rd, Bandra West"
               />
+            </div>
+            <div className={styles.grid2}>
               <Input
                 label={isRent ? 'Monthly rent (₹)' : 'Sale price (₹)'}
                 type="number"
@@ -130,14 +156,6 @@ export function PropertyForm({
                 placeholder={isRent ? 'e.g. 45000' : 'e.g. 8500000'}
                 hint={priceHint(form.price, isRent)}
               />
-            </div>
-            <Input
-              label="Address"
-              value={form.location}
-              onChange={(e) => set('location', e.target.value)}
-              placeholder="e.g. 14 Sea View Apts, Carter Rd, Bandra West"
-            />
-            <div className={styles.grid2}>
               <Input
                 label="Security deposit (₹)"
                 type="number"
@@ -281,7 +299,7 @@ interface SectionProps {
   icon: ReactNode
   tint: 'mint' | 'green' | 'lavender' | 'peach'
   title: string
-  meta?: string
+  meta?: ReactNode
   className?: string
   children: ReactNode
 }
@@ -308,14 +326,16 @@ interface ChoicesProps {
   onChange: (value: string) => void
   format?: (option: string) => string
   compact?: boolean
+  /** Keeps every option on one line on phones. */
+  oneLine?: boolean
 }
 
-function Choices({ label, options, value, onChange, format = capitalize, compact = false }: ChoicesProps) {
+function Choices({ label, options, value, onChange, format = capitalize, compact = false, oneLine = false }: ChoicesProps) {
   const id = useId()
   return (
     <div className={styles.field}>
       <span className={styles.label} id={id}>{label}</span>
-      <div className={styles.chips} role="group" aria-labelledby={id}>
+      <div className={`${styles.chips} ${oneLine ? styles.chipsOneLine : ''}`} role="group" aria-labelledby={id}>
         {options.map((o) => (
           <button
             key={o}

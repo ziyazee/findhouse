@@ -1,9 +1,22 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
+// Serves public/booklet.html at /booklet in dev. Cloudflare Pages already does this in production.
+const bookletRoute: Plugin = {
+  name: 'booklet-route',
+  configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      if (req.url && /^\/booklet\/?(\?.*)?$/.test(req.url)) req.url = '/booklet.html'
+      next()
+    })
+  },
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), bookletRoute],
+  // Listen on the local network too, so a phone on the same Wi-Fi can open the dev site.
+  server: { host: true },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

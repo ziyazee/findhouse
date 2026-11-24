@@ -1,4 +1,5 @@
 import { currentSite, listingSiteUrl } from '@/lib/site'
+import { trackEvent } from '@/lib/trackEvent'
 import { toast } from '@/shared/components/toastStore'
 import type { Property } from './property.types'
 
@@ -25,4 +26,13 @@ export async function shareLink(title: string, url: string) {
   await copyLink(url)
 }
 
-export const shareProperty = (p: Pick<Property, 'shortId' | 'title'>, url = publicUrl(p)) => shareLink(p.title, url)
+/** Opens WhatsApp with the link pre-filled so the broker picks who to send it to. */
+export function shareOnWhatsApp(p: Pick<Property, 'id' | 'title'>, url: string) {
+  trackEvent(p.id, 'share')
+  window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, '_blank', 'noopener')
+}
+
+export function shareProperty(p: Pick<Property, 'id' | 'shortId' | 'title'>, url = publicUrl(p)) {
+  trackEvent(p.id, 'share')
+  return shareLink(p.title, url)
+}

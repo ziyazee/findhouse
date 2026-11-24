@@ -334,6 +334,26 @@ export type Database = {
         Args: { new_subdomain: string }
         Returns: string
       }
+      track_property_event: {
+        Args: { pid: string; event_kind: string }
+        Returns: undefined
+      }
+      submit_broker_review: {
+        Args: { page_broker_id: string; device: string; stars: number; review_comment?: string | null; reviewer_name?: string | null }
+        Returns: undefined
+      }
+      delete_my_broker_review: {
+        Args: { review_id: number }
+        Returns: boolean
+      }
+      get_broker_reviews: {
+        Args: { page_broker_id: string; device?: string | null; max_rows?: number }
+        Returns: unknown
+      }
+      broker_property_stats: {
+        Args: { days?: number }
+        Returns: { property_id: string; kind: string; day: string; n: number }[]
+      }
     }
     Enums: Record<string, never>
   }

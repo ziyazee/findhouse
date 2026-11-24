@@ -1,35 +1,47 @@
-import { useMemo, type ReactNode } from 'react'
-import { ChartColumn, IndianRupee, KeyRound, MessageCircle, TriangleAlert, Wallet } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { ChartColumn, Eye, MessageCircle, Share2, TrendingUp, TriangleAlert } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { Button } from '@/shared/components/Button'
 import { Card, CardHeader, EmptyState, Skeleton } from '@/shared/components/Card'
-import { motion } from 'framer-motion'
 import { Item, Reveal } from '@/shared/components/Motion'
 import { PageHero } from '@/shared/components/PageHero/PageHero'
-import { pop, stagger, useEntranceInitial } from '@/shared/motion'
 import { heroBody } from '@/shared/components/PageHero/heroClasses'
-import { inr } from '@/shared/format'
-import { useDashboardData } from '@/modules/dashboard/hooks/useDashboardData'
-import { LISTING_STATUSES, STATUS_META } from '@/modules/properties/listingStatus'
-import { addedByMonth, rentByArea, submissionSuccess } from '../metrics'
+import { pop, stagger, useEntranceInitial } from '@/shared/motion'
+import { useProperties } from '@/modules/properties/hooks/useProperties'
+import { enquiryRate, perDay, perProperty, totalsOf } from '../metrics'
+import { usePerformanceStats } from '../usePerformanceStats'
 import styles from './PerformancePage.module.css'
+
+const RANGES = [7, 30, 90] as const
+
+const percent = (r: number | null) => (r === null ? '—' : `${(r * 100).toFixed(r < 0.1 ? 1 : 0)}%`)
 
 export default function PerformancePage() {
   const entranceInitial = useEntranceInitial()
-  const { isLoading, isError, refetch, summary, intake, properties } = useDashboardData()
+  const [days, setDays] = useState<(typeof RANGES)[number]>(30)
+  const stats = usePerformanceStats(days)
+  const props = useProperties()
 
-  const byArea = useMemo(() => rentByArea(properties), [properties])
-  const months = useMemo(() => addedByMonth(properties), [properties])
-  const { finished, rate: success } = submissionSuccess(intake)
-  const maxMonth = Math.max(1, ...months.map((m) => m.count))
-  const maxArea = Math.max(1, ...byArea.map((a) => a.avg))
+  const rows = useMemo(() => stats.data ?? [], [stats.data])
+  const properties = useMemo(() => props.data ?? [], [props.data])
+  const totals = useMemo(() => totalsOf(rows), [rows])
+  const daily = useMemo(() => perDay(rows, days), [rows, days])
+  const ranked = useMemo(() => perProperty(rows, properties), [rows, properties])
+
+  const isLoading = stats.isLoading || props.isLoading
+  const isError = stats.isError || props.isError
+  const maxDay = Math.max(1, ...daily.map((d) => d.views))
+  const maxViews = Math.max(1, ...ranked.map((p) => p.views))
   const showData = !isError && (isLoading || properties.length > 0)
+  const range = `Last ${days} days`
 
   return (
     <>
       <PageHero
         overlap={showData}
         title="Performance"
-        subtitle="How your portfolio is doing, based on your current properties."
+        subtitle="How people respond to your listings: views, shares and enquiries."
       />
 
       {isError ? (
@@ -38,7 +50,7 @@ export default function PerformancePage() {
             icon={<TriangleAlert size={20} />}
             title="Couldn’t load performance"
             description="Check your connection and try again."
-            action={<Button variant="secondary" onClick={() => refetch()}>Try again</Button>}
+            action={<Button variant="secondary" onClick={() => { void stats.refetch(); void props.refetch() }}>Try again</Button>}
           />
         </Card>
       ) : !showData ? (
@@ -46,82 +58,73 @@ export default function PerformancePage() {
           <EmptyState
             icon={<ChartColumn size={20} />}
             title="No data yet"
-            description="Once you add properties, occupancy and rent figures will appear here."
+            description="Once you add properties and share their links, views and enquiries will appear here."
           />
         </Card>
       ) : (
         <>
           <motion.section className={styles.kpis} aria-label="Key figures" variants={stagger(0.08, 0.15)} initial={entranceInitial} animate="show">
-            <Kpi tint="mint" icon={<KeyRound size={18} />} label="Occupancy" value={`${Math.round(summary.occupancy * 100)}%`} sub="Rentals with a tenant" loading={isLoading} />
-            <Kpi tint="green" icon={<IndianRupee size={18} />} label="Monthly rent, rented units" value={inr(summary.rentRoll)} sub={`${summary.byStatus.rented} rented`} loading={isLoading} />
-            <Kpi tint="lavender" icon={<Wallet size={18} />} label="Average asking rent" value={summary.avgRent ? inr(summary.avgRent) : '—'} sub="Across rentals with a price" loading={isLoading} />
-            <Kpi
-              tint="peach"
-              icon={<MessageCircle size={18} />}
-              label="WhatsApp success rate"
-              value={success === null ? '—' : `${Math.round(success * 100)}%`}
-              sub={`${finished} recent submissions`}
-              loading={isLoading}
-            />
+            <Kpi tint="mint" icon={<Eye size={18} />} label="Views" value={String(totals.views)} sub="Times a listing page was opened" loading={isLoading} />
+            <Kpi tint="lavender" icon={<Share2 size={18} />} label="Shares" value={String(totals.shares)} sub="Times a link was shared" loading={isLoading} />
+            <Kpi tint="green" icon={<MessageCircle size={18} />} label="Enquiries" value={String(totals.enquiries)} sub={`${totals.whatsapp} WhatsApp · ${totals.calls} calls`} loading={isLoading} />
+            <Kpi tint="peach" icon={<TrendingUp size={18} />} label="Enquiry rate" value={percent(enquiryRate(totals))} sub="Enquiries per view" loading={isLoading} />
           </motion.section>
 
           <Reveal className={`${styles.grid} ${entranceInitial === false ? styles.still : ''}`} gap={0.1} delay={0.35}>
-            <Item>
+            <Item className={styles.wide}>
               <Card>
-                <CardHeader title="Properties by status" description={`${summary.total} in total`} />
-                <div className={styles.cardBody}>
-                  {isLoading ? <Skeleton height={12} radius={999} /> : (
-                    <div className={styles.stack} role="img" aria-label={LISTING_STATUSES.map((s) => `${STATUS_META[s].label} ${summary.byStatus[s]}`).join(', ')}>
-                      {LISTING_STATUSES.map((s) => summary.byStatus[s] > 0 && (
-                        <span key={s} className={styles[`seg_${s}`]} style={{ flexGrow: summary.byStatus[s] }} />
+                <CardHeader
+                  title="Views per day"
+                  description={range}
+                  action={
+                    <div className={styles.range} role="group" aria-label="Period">
+                      {RANGES.map((r) => (
+                        <button key={r} type="button" aria-pressed={days === r} onClick={() => setDays(r)}>{r}d</button>
                       ))}
                     </div>
-                  )}
-                  <ul className={styles.legend}>
-                    {LISTING_STATUSES.map((s) => (
-                      <li key={s}>
-                        <span className={`${styles.swatch} ${styles[`seg_${s}`]}`} aria-hidden="true" />
-                        <span className={styles.legendLabel}>{STATUS_META[s].label}</span>
-                        <span className={styles.legendValue}>{isLoading ? '–' : summary.byStatus[s]}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </Card>
-            </Item>
-
-            <Item>
-              <Card>
-                <CardHeader title="Added per month" description="Last 6 months" />
+                  }
+                />
                 <div className={styles.cardBody}>
-                  <ol className={styles.columns}>
-                    {months.map((m) => (
-                      <li key={m.key}>
-                        <span className={styles.colValue}>{m.count}</span>
-                        <span className={styles.colTrack}>
-                          <span className={styles.colBar} style={{ height: `${(m.count / maxMonth) * 100}%` }} />
-                        </span>
-                        <span className={styles.colLabel}>{m.label}</span>
-                      </li>
-                    ))}
-                  </ol>
+                  {isLoading ? <Skeleton height={140} /> : totals.views === 0 && totals.enquiries === 0 ? (
+                    <p className={styles.muted}>No activity in this period yet. Share a listing link to get started.</p>
+                  ) : (
+                    <>
+                      <ol className={styles.days} style={{ gridTemplateColumns: `repeat(${daily.length}, minmax(0, 1fr))` }}>
+                        {daily.map((d, i) => (
+                          <li key={d.key} title={`${d.label}: ${d.views} views, ${d.enquiries} enquiries`}>
+                            <span className={styles.dayTrack}>
+                              <span className={styles.dayBar} style={{ height: `${(d.views / maxDay) * 100}%` }} />
+                            </span>
+                            <span className={styles.dayLabel}>{i % Math.ceil(daily.length / 6) === 0 ? d.label : ''}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </>
+                  )}
                 </div>
               </Card>
             </Item>
 
             <Item className={styles.wide}>
               <Card>
-                <CardHeader title="Average rent by area" description="Rentals with a price, top 6 areas" />
+                <CardHeader title="By property" description={`${range}, most enquiries first`} />
                 <div className={styles.cardBody}>
-                  {byArea.length === 0 ? (
-                    <p className={styles.muted}>Add a locality and rent to your rentals to compare areas.</p>
+                  {ranked.length === 0 ? (
+                    <p className={styles.muted}>No properties yet.</p>
                   ) : (
-                    <ul className={styles.bars}>
-                      {byArea.map((a) => (
-                        <li key={a.area}>
-                          <span className={styles.barLabel}>{a.area}<span className={styles.barCount}>{a.count}</span></span>
-                          <span className={styles.barTrack}><span className={styles.bar} style={{ width: `${(a.avg / maxArea) * 100}%` }} /></span>
-                          <span className={styles.barValue}>{inr(a.avg)}</span>
+                    <ul className={styles.rank}>
+                      <li className={styles.rankHead} aria-hidden="true">
+                        <span>Property</span><span>Views</span><span>Shares</span><span>Enquiries</span>
+                      </li>
+                      {ranked.map((p) => (
+                        <li key={p.id}>
+                          <span className={styles.rankTitle}>
+                            <Link to={`/properties/${p.id}`}>{p.title}</Link>
+                            <span className={styles.rankTrack}><span className={styles.rankBar} style={{ width: `${(p.views / maxViews) * 100}%` }} /></span>
+                          </span>
+                          <span className={styles.num} data-label="Views">{p.views}</span>
+                          <span className={styles.num} data-label="Shares">{p.shares}</span>
+                          <span className={`${styles.num} ${styles.strong}`} data-label="Enquiries">{p.enquiries}</span>
                         </li>
                       ))}
                     </ul>

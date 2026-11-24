@@ -1,0 +1,23 @@
+{
+  "name": "@findhouse/promo",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Promo out/findhouse-promo.mp4",
+    "render:vertical": "remotion render src/index.ts PromoVertical out/findhouse-promo-vertical.mp4",
+    "typecheck": "tsc --noEmit",
+    "voice": "node scripts/generate-voice.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "remotion": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "typescript": "^5.5.3"
+  }
+}

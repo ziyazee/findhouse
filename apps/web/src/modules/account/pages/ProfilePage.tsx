@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChartColumn, ChevronRight, Globe, House, Inbox, KeyRound, LifeBuoy, LogOut, Settings, Zap } from 'lucide-react'
+import { ChartColumn, ChevronRight, Globe, House, Inbox, KeyRound, LifeBuoy, LogOut, Settings, Star, Zap } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Card, Skeleton } from '@/shared/components/Card'
 import { CountUp, Item, Reveal } from '@/shared/components/Motion'
@@ -63,6 +63,7 @@ export default function ProfilePage() {
               )}
               <Row to="/settings" tint="mint" icon={<Settings size={18} />} title="Account settings" text="Your details and preferences" />
               <Row to="/performance" tint="green" icon={<ChartColumn size={18} />} title="Performance" text="Occupancy and rent by area" />
+              <Row to="/reviews" tint="peach" icon={<Star size={18} />} title="Reviews" text="What visitors say about you" />
               <Row to="/enquiries" tint="lavender" icon={<Inbox size={18} />} title="Enquiries" text="Messages from your property pages" />
               <Row to="/help" tint="peach" icon={<LifeBuoy size={18} />} title="Help & support" text="How listing from WhatsApp works" />
             </ul>

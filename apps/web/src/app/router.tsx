@@ -20,6 +20,7 @@ const PropertyPage     = lazy(brokerPages.property)
 const NewPropertyPage  = lazy(brokerPages.newProperty)
 const EnquiriesPage    = lazy(brokerPages.enquiries)
 const PerformancePage  = lazy(brokerPages.performance)
+const ReviewsPage      = lazy(brokerPages.reviews)
 const SettingsPage     = lazy(brokerPages.settings)
 const ProfilePage      = lazy(brokerPages.profile)
 const HelpPage         = lazy(brokerPages.help)
@@ -59,6 +60,7 @@ const routes: RouteObject[] = [
           { path: '/properties/:id', element: <PropertyPage /> },
           { path: '/enquiries',      element: <EnquiriesPage /> },
           { path: '/performance',    element: <PerformancePage /> },
+          { path: '/reviews',        element: <ReviewsPage /> },
           { path: '/profile',        element: <ProfilePage /> },
           { path: '/settings',       element: <SettingsPage /> },
           { path: '/help',           element: <HelpPage /> },

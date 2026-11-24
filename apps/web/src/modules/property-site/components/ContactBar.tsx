@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Phone } from 'lucide-react'
+import { trackEvent } from '@/lib/trackEvent'
 import type { Property } from '@/modules/properties/property.types'
 import { enquiryMessage, priceLine, whatsAppLink } from '../listingContent'
 import { useScrolledPast } from './useScrolledPast'
@@ -30,11 +31,11 @@ export function ContactBar({ property: p, phone }: { property: Property; phone: 
                 {priceLine(p)}
               </span>
             </div>
-            <a className={styles.callBtn} href={`tel:+${phone}`}>
+            <a className={styles.callBtn} href={`tel:+${phone}`} onClick={() => trackEvent(p.id, 'call')}>
               <Phone size={18} aria-hidden="true" />
               Call
             </a>
-            <a className={styles.whatsappBtn} href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+            <a className={styles.whatsappBtn} href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent(p.id, 'whatsapp')}>
               <WhatsAppIcon />
               WhatsApp
             </a>

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Camera, ChevronDown, CircleCheck, ClipboardList, MessageCircle, Send } from 'lucide-react'
+import { BookOpen, Camera, ChevronDown, CircleCheck, ClipboardList, MessageCircle, Send } from 'lucide-react'
 import { Badge } from '@/shared/components/Badge'
 import { Card, CardHeader, } from '@/shared/components/Card'
 import { Item, Reveal } from '@/shared/components/Motion'
@@ -92,6 +92,19 @@ export default function HelpPage() {
                   <p>{f.a}</p>
                 </details>
               ))}
+            </div>
+          </Card>
+        </Item>
+
+        <Item>
+          <Card padded>
+            <div className={styles.contact}>
+              <span className={styles.stepIcon} aria-hidden="true"><BookOpen size={18} /></span>
+              <div className={styles.contactText}>
+                <p className={styles.stepTitle}>Broker booklet</p>
+                <p className={styles.stepText}>A step-by-step guide to listing, sharing and managing your properties. Save it as a PDF to keep.</p>
+              </div>
+              <a href="/booklet" target="_blank" rel="noopener" className={styles.contactLink}>Open booklet</a>
             </div>
           </Card>
         </Item>

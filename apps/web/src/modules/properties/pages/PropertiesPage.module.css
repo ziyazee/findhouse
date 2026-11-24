@@ -4,6 +4,11 @@
   gap: 16px;
 }
 
+/* Desktop: never more than three cards per row. */
+@media (min-width: 961px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 28px; }
+}
+
 .gridItem { display: grid; min-width: 0; }
 
 .resultCount {

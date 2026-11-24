@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Bath, BedDouble, ChevronDown, Copy, Ellipsis, ExternalLink, FilePen, Globe, Images, Lock, MapPin, Ruler, SearchX, Share2, Sofa, Trash2, TriangleAlert } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { ListingTypeBadge } from '@/shared/components/Badge'
-import { motion, type Variants } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { Card, EmptyState, Skeleton } from '@/shared/components/Card'
 import { easeOut, pop, stagger, useEntranceInitial } from '@/shared/motion'
 import { Menu, type MenuItem } from '@/shared/components/Menu'
@@ -20,6 +20,7 @@ import { copyPropertyLink, shareProperty } from '../shareProperty'
 import { useMySite } from '@/modules/broker-site/useBrokerSite'
 import { depositLine, maintenanceLine } from '../listingExtras'
 import { ListingStatusBadge } from '../components/ListingStatusBadge'
+import { VisibilitySwitch } from '../components/VisibilitySwitch'
 import { VisibilityBadge } from '../components/VisibilityBadge'
 import { hiddenReason } from '../visibility'
 import type { UpdatePropertyInput } from '../property.types'
@@ -29,6 +30,7 @@ type Tab = 'details' | 'media'
 
 export default function PropertyPage() {
   const entranceInitial = useEntranceInitial()
+  const reduceMotion = useReducedMotion()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('details')
@@ -186,33 +188,11 @@ export default function PropertyPage() {
           <h2 id="visibility-title">{property.isPublic ? 'Public listing' : 'Private listing'}</h2>
           <p>
             {property.isPublic
-              ? hiddenReason(property) ?? 'Shown on your public page, where anyone can find it.'
-              : 'Hidden from your public page and from search engines. Anyone you send the link to can still open it.'}
+              ? hiddenReason(property) ?? 'Visible on your public page.'
+              : 'Hidden. Only people with the link can open it.'}
           </p>
-          {property.isPublic && site.pageUrl && (
-            <a className={styles.visibilityLink} href={site.pageUrl} target="_blank" rel="noreferrer">
-              View your public page<ExternalLink size={14} aria-hidden="true" />
-            </a>
-          )}
         </div>
-        <div className={styles.segment} role="group" aria-label="Who can find this listing">
-          <button
-            type="button"
-            aria-pressed={!property.isPublic}
-            disabled={actions.visibilityPending}
-            onClick={() => property.isPublic && actions.changeVisibility(property, false)}
-          >
-            <Lock size={16} aria-hidden="true" />Private
-          </button>
-          <button
-            type="button"
-            aria-pressed={property.isPublic}
-            disabled={actions.visibilityPending}
-            onClick={() => !property.isPublic && actions.changeVisibility(property, true)}
-          >
-            <Globe size={16} aria-hidden="true" />Public
-          </button>
-        </div>
+        <VisibilitySwitch property={property} large />
       </section>
 
       {status === 'draft' && (
@@ -241,7 +221,8 @@ export default function PropertyPage() {
           className={`${styles.tab} ${tab === 'details' ? styles.tabActive : ''}`}
           onClick={() => setTab('details')}
         >
-          Details
+          {tab === 'details' && <motion.span layoutId="tab-pill" className={styles.tabPill} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+          <span className={styles.tabLabel}>Details</span>
         </button>
         <button
           role="tab"
@@ -251,27 +232,46 @@ export default function PropertyPage() {
           className={`${styles.tab} ${tab === 'media' ? styles.tabActive : ''}`}
           onClick={() => setTab('media')}
         >
-          <span>Photos<span className={styles.tabLong}> and videos</span></span>
-          <span className={styles.tabCount}>{property.media.length}</span>
+          {tab === 'media' && <motion.span layoutId="tab-pill" className={styles.tabPill} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+          <span className={styles.tabLabel}>Photos<span className={styles.tabLong}> and videos</span></span>
+          <span className={`${styles.tabLabel} ${styles.tabCount}`}>{property.media.length}</span>
         </button>
       </div>
 
-      {tab === 'details' && (
-        <div role="tabpanel" id="panel-details" aria-labelledby="tab-details">
-          <PropertyForm
-            initialValues={property}
-            onSubmit={handleSave}
-            submitLabel="Save changes"
-            isLoading={saving}
-          />
-        </div>
-      )}
-
-      {tab === 'media' && (
-        <div role="tabpanel" id="panel-media" aria-labelledby="tab-media">
-          <MediaGallery propertyId={property.id} media={property.media} />
-        </div>
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        {tab === 'details' ? (
+          <motion.div
+            key="details"
+            role="tabpanel"
+            id="panel-details"
+            aria-labelledby="tab-details"
+            initial={reduceMotion ? false : { opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, x: -24 }}
+            transition={{ duration: 0.22, ease: easeOut }}
+          >
+            <PropertyForm
+              initialValues={property}
+              onSubmit={handleSave}
+              submitLabel="Save changes"
+              isLoading={saving}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="media"
+            role="tabpanel"
+            id="panel-media"
+            aria-labelledby="tab-media"
+            initial={reduceMotion ? false : { opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, x: 24 }}
+            transition={{ duration: 0.22, ease: easeOut }}
+          >
+            <MediaGallery propertyId={property.id} media={property.media} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {actions.dialog}
     </>

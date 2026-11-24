@@ -102,7 +102,7 @@ export default function PropertiesPage() {
       <motion.div key="grid" className={styles.grid} initial={entranceInitial} animate="show">
         {filtered.map((p, i) => (
           <motion.div key={p.id} className={styles.gridItem} variants={listItem} custom={i + 4}>
-            <PropertyCard property={p} menuItems={actions.itemsFor(p)} shareOnPhone />
+            <PropertyCard property={p} menuItems={actions.itemsFor(p)} shareOnPhone onStatusChange={(status) => actions.changeStatus(p, status)} />
           </motion.div>
         ))}
       </motion.div>

@@ -5,6 +5,7 @@ export const brokerPages = {
   newProperty: () => import('@/modules/properties/pages/NewPropertyPage'),
   enquiries:   () => import('@/modules/enquiries/pages/EnquiriesPage'),
   performance: () => import('@/modules/performance/pages/PerformancePage'),
+  reviews:     () => import('@/modules/broker-site/ReviewsPage'),
   settings:    () => import('@/modules/account/pages/SettingsPage'),
   profile:     () => import('@/modules/account/pages/ProfilePage'),
   help:        () => import('@/modules/help/pages/HelpPage'),

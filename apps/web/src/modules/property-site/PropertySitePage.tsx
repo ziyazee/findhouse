@@ -16,6 +16,7 @@ import { shareProperty } from '@/modules/properties/shareProperty'
 import { formatDate, placeOf } from '@/modules/properties/listingStatus'
 import type { Property } from '@/modules/properties/property.types'
 import { siteSubdomain } from '@/lib/site'
+import { trackEvent } from '@/lib/trackEvent'
 import { getMediaUrl } from '@/lib/storage'
 import { useAuthStore } from '@/modules/auth/AuthStore'
 import { rupeesInWords } from '@/shared/format'
@@ -84,6 +85,7 @@ function Listing({ property: p }: { property: Property }) {
   const phone = contact.data ?? (isOwner ? viewer.phone : null) ?? null
   const agent = agentName.data ?? (isOwner ? viewer.name : null) ?? null
   useNoIndex(!p.isPublic)
+  useEffect(() => trackEvent(p.id, 'view'), [p.id])
 
   const items = useMemo(() => galleryMedia(p.media), [p.media])
   const gallery = usePhotoParam(items.length)
@@ -280,7 +282,7 @@ function Listing({ property: p }: { property: Property }) {
                 <span className={styles.agentMark} aria-hidden="true"><Phone size={18} /></span>
                 <div>
                   <span className={styles.agentLabel}>{agent ? `Listed by ${agent}` : 'Listed by the agent'}</span>
-                  <a className={styles.agentPhone} href={`tel:+${phone}`}>{formatPhone(phone)}</a>
+                  <a className={styles.agentPhone} href={`tel:+${phone}`} onClick={() => trackEvent(p.id, 'call')}>{formatPhone(phone)}</a>
                 </div>
                 {p.isPublic && p.brokerId && (
                   <Link className={styles.agentMore} to={siteSubdomain ? '/' : `/b/${p.brokerId}`}>

@@ -19,6 +19,6 @@ export function onBrokerPage(p: Property): boolean {
 export function hiddenReason(p: Property): string | null {
   if (!p.isPublic || onBrokerPage(p)) return null
   const status = listingStatus(p)
-  if (status === 'draft') return 'It will show on your public page once it has a price and a photo.'
-  return 'It will show on your public page again once you mark it as active.'
+  if (status === 'draft') return 'Shows once it has a price and a photo.'
+  return 'Shows again when you mark it as active.'
 }

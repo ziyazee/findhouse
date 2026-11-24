@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useOutlet } from 'react-router-dom'
 import { LayoutGroup, MotionConfig, motion } from 'framer-motion'
 import {
   LayoutDashboard, Building2, CirclePlus, ChartColumn, Settings, LifeBuoy,
-  Menu as MenuIcon, X, LogOut, ChevronsUpDown, Plus, UserRound,
+  Star, Menu as MenuIcon, X, LogOut, ChevronsUpDown, Plus, UserRound,
 } from 'lucide-react'
 import logoMark from '@/assets/logo-mark.png'
 import { useAuth, useSignOut } from '@/modules/auth/useAuth'
@@ -36,6 +36,7 @@ const PRIMARY: NavItem[] = [
   { to: '/properties/new', label: 'Add property', icon: <CirclePlus size={18} /> },
   { to: '/profile', label: 'Profile', icon: <UserRound size={18} /> },
   { to: '/performance', label: 'Performance', icon: <ChartColumn size={18} /> },
+  { to: '/reviews', label: 'Reviews', icon: <Star size={18} /> },
 ]
 
 const TABS: NavItem[] = [
@@ -43,7 +44,7 @@ const TABS: NavItem[] = [
   { to: '/properties', label: 'Properties', icon: <Building2 size={22} />, match: PRIMARY[1].match },
   { to: '/properties/new', label: 'Add property', icon: <Plus size={24} strokeWidth={2.25} /> },
   { to: '/performance', label: 'Performance', icon: <ChartColumn size={22} /> },
-  { to: '/profile', label: 'Profile', icon: <UserRound size={22} />, match: (p) => ['/profile', '/settings', '/help', '/enquiries'].includes(p) },
+  { to: '/profile', label: 'Profile', icon: <UserRound size={22} />, match: (p) => ['/profile', '/settings', '/help', '/enquiries', '/reviews'].includes(p) },
 ]
 
 // Full-screen tasks: they have their own back link and a sticky save bar.

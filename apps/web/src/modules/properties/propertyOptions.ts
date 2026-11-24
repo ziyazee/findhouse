@@ -1,5 +1,5 @@
 /** Choices offered by the property form and filters. Saved values outside these lists are still shown. */
-export const PROPERTY_TYPES = ['apartment', 'house', 'villa', 'plot', 'commercial']
+export const PROPERTY_TYPES = ['apartment', 'house', 'villa', 'commercial']
 export const BEDROOMS = ['1', '2', '3', '4', '5', '6']
 export const BATHROOMS = ['1', '2', '3', '4', '5']
 export const BALCONIES = ['0', '1', '2', '3', '4']

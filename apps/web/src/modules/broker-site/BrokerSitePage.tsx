@@ -16,6 +16,7 @@ import { easeOut, rise, stagger } from '@/shared/motion'
 import logoMark from '@/assets/logo-mark.png'
 import { brokerService, type BrokerProfile } from './BrokerService'
 import { brokerEnquiryMessage, brokerPageListings, cardFacts, countByType, homesCount } from './brokerPage'
+import Reviews from './Reviews'
 import styles from './BrokerSitePage.module.css'
 
 /**
@@ -160,6 +161,7 @@ function Page({ profile, pageUrl, listings }: PageProps) {
             {shown.map((p) => <ListingCard key={p.id} property={p} />)}
           </motion.ul>
         )}
+        <Reviews brokerId={profile.id} isOwner={isOwner} />
       </main>
 
       <footer className={styles.footer}>
