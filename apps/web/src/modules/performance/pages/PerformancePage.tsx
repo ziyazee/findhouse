@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChartColumn, Eye, MessageCircle, Share2, TrendingUp, TriangleAlert } from 'lucide-react'
+import { Building2, ChartColumn, Eye, KeyRound, MessageCircle, Phone, TriangleAlert } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/shared/components/Button'
 import { Card, CardHeader, EmptyState, Skeleton } from '@/shared/components/Card'
@@ -9,13 +9,11 @@ import { PageHero } from '@/shared/components/PageHero/PageHero'
 import { heroBody } from '@/shared/components/PageHero/heroClasses'
 import { pop, stagger, useEntranceInitial } from '@/shared/motion'
 import { useProperties } from '@/modules/properties/hooks/useProperties'
-import { enquiryRate, perDay, perProperty, totalsOf } from '../metrics'
+import { perDay, perProperty, totalsOf } from '../metrics'
 import { usePerformanceStats } from '../usePerformanceStats'
 import styles from './PerformancePage.module.css'
 
 const RANGES = [7, 30, 90] as const
-
-const percent = (r: number | null) => (r === null ? '—' : `${(r * 100).toFixed(r < 0.1 ? 1 : 0)}%`)
 
 export default function PerformancePage() {
   const entranceInitial = useEntranceInitial()
@@ -29,6 +27,10 @@ export default function PerformancePage() {
   const daily = useMemo(() => perDay(rows, days), [rows, days])
   const ranked = useMemo(() => perProperty(rows, properties), [rows, properties])
 
+  const listed = properties.length
+  const rented = properties.filter((p) => p.status === 'rented').length
+  const active = properties.filter((p) => p.status === 'available').length
+
   const isLoading = stats.isLoading || props.isLoading
   const isError = stats.isError || props.isError
   const maxDay = Math.max(1, ...daily.map((d) => d.views))
@@ -41,7 +43,7 @@ export default function PerformancePage() {
       <PageHero
         overlap={showData}
         title="Performance"
-        subtitle="How people respond to your listings: views, shares and enquiries."
+        subtitle="How your listings are doing: views, properties listed, rented, and who contacted you."
       />
 
       {isError ? (
@@ -65,9 +67,10 @@ export default function PerformancePage() {
         <>
           <motion.section className={styles.kpis} aria-label="Key figures" variants={stagger(0.08, 0.15)} initial={entranceInitial} animate="show">
             <Kpi tint="mint" icon={<Eye size={18} />} label="Views" value={String(totals.views)} sub="Times a listing page was opened" loading={isLoading} />
-            <Kpi tint="lavender" icon={<Share2 size={18} />} label="Shares" value={String(totals.shares)} sub="Times a link was shared" loading={isLoading} />
-            <Kpi tint="green" icon={<MessageCircle size={18} />} label="Enquiries" value={String(totals.enquiries)} sub={`${totals.whatsapp} WhatsApp · ${totals.calls} calls`} loading={isLoading} />
-            <Kpi tint="peach" icon={<TrendingUp size={18} />} label="Enquiry rate" value={percent(enquiryRate(totals))} sub="Enquiries per view" loading={isLoading} />
+            <Kpi tint="lavender" icon={<Building2 size={18} />} label="Properties listed" value={String(listed)} sub={`${active} active right now`} loading={isLoading} />
+            <Kpi tint="peach" icon={<KeyRound size={18} />} label="Rented" value={String(rented)} sub="Properties marked as rented" loading={isLoading} />
+            <Kpi tint="green" icon={<MessageCircle size={18} />} label="WhatsApp" value={String(totals.whatsapp)} sub="Contacted on WhatsApp" loading={isLoading} />
+            <Kpi tint="mint" icon={<Phone size={18} />} label="Phone calls" value={String(totals.calls)} sub="Contacted by phone call" loading={isLoading} />
           </motion.section>
 
           <Reveal className={`${styles.grid} ${entranceInitial === false ? styles.still : ''}`} gap={0.1} delay={0.35}>

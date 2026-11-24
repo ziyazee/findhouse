@@ -3,6 +3,7 @@ import { useId, useRef, useState, type ReactNode } from 'react'
 import { AlignLeft, ArrowLeft, BedDouble, CalendarCheck, FileText, ListChecks, MapPin, Plus, X } from 'lucide-react'
 import { Input } from '@/shared/components/Input'
 import { Button } from '@/shared/components/Button'
+import { AddDetailSheet } from './AddDetailSheet'
 import { capitalize } from '@/shared/format'
 import type { CreatePropertyInput, Property } from '../property.types'
 import {
@@ -35,8 +36,10 @@ export function PropertyForm({
   const [error, setError] = useState('')
   const [titleError, setTitleError] = useState('')
   const nextExtraId = useRef(0)
+  const [addingExtra, setAddingExtra] = useState(false)
 
   const isRent = form.listingType === 'rent'
+  const maintenanceIncluded = /^includ/i.test(form.maintenance.trim())
   const suggestedTitle = suggestTitle(form.bedrooms, form.propertyType, form.locality)
 
   function set<K extends keyof PropertyFormState>(key: K, value: PropertyFormState[K]) {
@@ -58,10 +61,10 @@ export function PropertyForm({
     set('extras', form.extras.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
 
-  function addExtra() {
+  function addExtra(label: string, value: string) {
     const id = `new-${++nextExtraId.current}`
-    set('extras', [...form.extras, { id, label: '', value: '' }])
-    requestAnimationFrame(() => document.getElementById(`${id}-label`)?.focus())
+    set('extras', [...form.extras, { id, label, value }])
+    setAddingExtra(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -154,7 +157,6 @@ export function PropertyForm({
                 value={form.price}
                 onChange={(e) => set('price', e.target.value)}
                 placeholder={isRent ? 'e.g. 45000' : 'e.g. 8500000'}
-                hint={priceHint(form.price, isRent)}
               />
               <Input
                 label="Security deposit (₹)"
@@ -166,12 +168,28 @@ export function PropertyForm({
                 placeholder={isRent ? 'e.g. 135000' : 'e.g. 500000'}
                 hint={priceHint(form.deposit, false)}
               />
+              <div className={styles.maintenanceField}>
+                <Input
+                  label="Maintenance (₹/month)"
+                  value={form.maintenance}
+                  onChange={(e) => set('maintenance', e.target.value)}
+                  placeholder="e.g. 3500, or Included"
+                  hint={maintenanceHint(form.maintenance)}
+                />
+                <button
+                  type="button"
+                  aria-pressed={maintenanceIncluded}
+                  className={`${styles.chip} ${styles.includedTag} ${maintenanceIncluded ? styles.chipActive : ''}`}
+                  onClick={() => set('maintenance', maintenanceIncluded ? '' : 'Included in rent')}
+                >
+                  Included
+                </button>
+              </div>
               <Input
-                label="Maintenance (₹/month)"
-                value={form.maintenance}
-                onChange={(e) => set('maintenance', e.target.value)}
-                placeholder="e.g. 3500, or Included"
-                hint={maintenanceHint(form.maintenance)}
+                label={isRent ? 'Move-in' : 'Possession'}
+                value={form.moveInDate}
+                onChange={(e) => set('moveInDate', e.target.value)}
+                placeholder="e.g. Immediate, or 1st January"
               />
             </div>
           </Section>
@@ -190,17 +208,17 @@ export function PropertyForm({
         </div>
 
         <div className={styles.column}>
-          <Section className={styles.rooms} icon={<BedDouble size={18} />} tint="lavender" title="Rooms and area">
+          <Section className={styles.rooms} icon={<BedDouble size={18} />} tint="lavender" title="Property details">
+            <Choices label="Furnishing" options={withValue(FURNISHING_OPTIONS, form.furnishing)} value={form.furnishing} onChange={(v) => set('furnishing', v)} />
             <div className={styles.grid2}>
-              <Choices label="Bedrooms" options={withValue(BEDROOMS, form.bedrooms)} value={form.bedrooms} onChange={(v) => set('bedrooms', v)} compact />
-              <Choices label="Bathrooms" options={withValue(BATHROOMS, form.bathrooms)} value={form.bathrooms} onChange={(v) => set('bathrooms', v)} compact />
-              <Input label="Built-up area (sq ft)" type="number" inputMode="numeric" min={0} value={form.builtUpArea} onChange={(e) => set('builtUpArea', e.target.value)} placeholder="1200" />
-              <Input label="Carpet area (sq ft)" type="number" inputMode="numeric" min={0} value={form.carpetArea} onChange={(e) => set('carpetArea', e.target.value)} placeholder="950" />
               <Input label="Floor" value={form.floor} onChange={(e) => set('floor', e.target.value)} placeholder="e.g. 5" />
               <Input label="Total floors" type="number" inputMode="numeric" min={0} value={form.totalFloors} onChange={(e) => set('totalFloors', e.target.value)} placeholder="12" />
             </div>
+            <div className={styles.grid2}>
+              <Choices label="Bedrooms" options={withValue(BEDROOMS, form.bedrooms)} value={form.bedrooms} onChange={(v) => set('bedrooms', v)} compact />
+              <Choices label="Bathrooms" options={withValue(BATHROOMS, form.bathrooms)} value={form.bathrooms} onChange={(v) => set('bathrooms', v)} compact />
+            </div>
             <Choices label="Balconies" options={withValue(BALCONIES, form.balconies)} value={form.balconies} onChange={(v) => set('balconies', v)} compact />
-            <Choices label="Furnishing" options={withValue(FURNISHING_OPTIONS, form.furnishing)} value={form.furnishing} onChange={(v) => set('furnishing', v)} />
             <Choices
               label="Parking"
               options={withValue(PARKING_OPTIONS, form.parking)}
@@ -232,13 +250,11 @@ export function PropertyForm({
             </div>
           </Section>
 
-          <Section className={styles.more} icon={<CalendarCheck size={18} />} tint="green" title="Availability and more" meta="Optional">
-            <Input
-              label={isRent ? 'Move-in' : 'Possession'}
-              value={form.moveInDate}
-              onChange={(e) => set('moveInDate', e.target.value)}
-              placeholder="e.g. Immediate, or 1st January"
-            />
+          <Section className={styles.more} icon={<CalendarCheck size={18} />} tint="green" title="Area and other details" meta="Optional">
+            <div className={styles.grid2}>
+              <Input label="Built-up area (sq ft)" type="number" inputMode="numeric" min={0} value={form.builtUpArea} onChange={(e) => set('builtUpArea', e.target.value)} placeholder="1200" />
+              <Input label="Carpet area (sq ft)" type="number" inputMode="numeric" min={0} value={form.carpetArea} onChange={(e) => set('carpetArea', e.target.value)} placeholder="950" />
+            </div>
             <div className={styles.field}>
               <span className={styles.label}>Other details</span>
               {form.extras.length > 0 && (
@@ -270,7 +286,7 @@ export function PropertyForm({
                   ))}
                 </ul>
               )}
-              <button type="button" className={styles.extraAdd} onClick={addExtra}>
+              <button type="button" className={styles.extraAdd} onClick={() => setAddingExtra(true)}>
                 <Plus size={16} aria-hidden="true" />
                 Add a detail
               </button>
@@ -278,6 +294,8 @@ export function PropertyForm({
           </Section>
         </div>
       </div>
+
+      <AddDetailSheet open={addingExtra} onAdd={addExtra} onClose={() => setAddingExtra(false)} />
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 

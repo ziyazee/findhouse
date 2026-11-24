@@ -123,6 +123,16 @@ export function justifiedRows(ratios: number[], target: number): GalleryRow[] {
 }
 
 /** Short price for the contact bar, e.g. "₹45,000 / month". */
+/** Deposit and maintenance for a rental, with "Confidential" when the broker left them out. */
+export function confidentialRentLines(
+  p: Pick<Property, 'listingType' | 'deposit' | 'other'>,
+  maintenance: string | null,
+  deposit: string | null,
+): Array<string | null> {
+  if (p.listingType !== 'rent') return [maintenance, deposit]
+  return [maintenance ?? 'Maintenance: Confidential', deposit ?? 'Deposit: Confidential']
+}
+
 export function priceLine(p: Pick<Property, 'price' | 'listingType'>) {
   return p.price ? `₹${p.price.toLocaleString('en-IN')}${p.listingType === 'rent' ? ' / month' : ''}` : 'Price on request'
 }

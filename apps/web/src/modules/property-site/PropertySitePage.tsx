@@ -35,7 +35,7 @@ import { useNoIndex } from './components/useNoIndex'
 import { usePhotoParam } from './components/usePhotoParam'
 import { useTourParam } from './components/useTourParam'
 import {
-  defaultDescription, formatPhone, galleryMedia, isVideo, mapEmbedUrl, mapsLink, mediaCount, photoAlt, propertyTypeLabel, sharedMapsLink,
+  confidentialRentLines, defaultDescription, formatPhone, galleryMedia, isVideo, mapEmbedUrl, mapsLink, mediaCount, photoAlt, propertyTypeLabel, sharedMapsLink,
   titleCase,
 } from './listingContent'
 import styles from './PropertySitePage.module.css'
@@ -124,7 +124,7 @@ function Listing({ property: p }: { property: Property }) {
     ...listingExtras(p).map((x) => ({ icon: TERM_ICONS[x.label] ?? EXTRA_ICONS[x.kind], label: x.label, value: x.value })),
     { icon: <CalendarDays size={18} />, label: 'Listed on', value: formatDate(p.createdAt) },
   ].filter(Boolean) as Detail[]
-  const priceExtras = [pricePerSqftLine(p), maintenanceLine(p), depositLine(p), availabilityLine(p)]
+  const priceExtras = [pricePerSqftLine(p), ...confidentialRentLines(p, maintenanceLine(p), depositLine(p)), availabilityLine(p)]
     .filter((s): s is string => Boolean(s))
 
   const description = p.description?.trim() || defaultDescription(p, place)

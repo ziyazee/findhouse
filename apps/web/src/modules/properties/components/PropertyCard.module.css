@@ -38,6 +38,23 @@
 .photoCount {
   position: absolute;
   right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 20px;
+  color: #fff;
+  background: rgba(var(--scrim-rgb), 0.65);
+  border-radius: 999px;
+}
+
+/* Views sit in the top right corner of the photo */
+.viewCount {
+  position: absolute;
+  right: 12px;
   top: 12px;
   display: inline-flex;
   align-items: center;
@@ -235,6 +252,5 @@
   .footer { padding-top: 10px; }
 
   .compact .body { gap: 4px; padding: 12px 12px 14px; }
-  .compact .specs, .compact .priceBlock { display: none; }
-  .compact .footer { justify-content: flex-end; border-top: 0; padding-top: 0; }
+  .compact .specs, .compact .footer { display: none; }
 }

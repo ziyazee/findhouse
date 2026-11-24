@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Play, Share2 } from 'lucide-react'
 import { getMediaUrl } from '@/lib/storage'
+import { trackEvent } from '@/lib/trackEvent'
 import type { Property, PropertyMedia } from '@/modules/properties/property.types'
 import { shareProperty } from '@/modules/properties/shareProperty'
 import { easeOut } from '@/shared/motion'
@@ -130,6 +131,7 @@ export function PhotoTour({ property: p, items, phone, covered, onOpen, onClose 
           href={whatsAppLink(phone, enquiryMessage(p, window.location.origin + window.location.pathname))}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackEvent(p.id, 'whatsapp')}
         >
           <WhatsAppIcon />
           Contact agent

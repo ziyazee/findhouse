@@ -4,7 +4,6 @@ import { ImagePlus, Pencil, Star, Tag, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { toast } from '@/shared/components/toastStore'
-import { titleCase } from '@/shared/format'
 import { useDeleteMedia, useSetCover, useSetMediaCategory, useUploadMedia } from '../hooks/usePropertyMutations'
 import { roomName } from '../mediaRooms'
 import type { PropertyMedia } from '../property.types'
@@ -45,7 +44,6 @@ export function MediaGallery({ propertyId, media }: MediaGalleryProps) {
   async function handleSetCover(mediaId: string) {
     try {
       await setCover.mutateAsync(mediaId)
-      toast.success('Cover photo updated')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Couldn’t change the cover photo')
     }
@@ -56,7 +54,6 @@ export function MediaGallery({ propertyId, media }: MediaGalleryProps) {
     if (item.category?.toUpperCase() === category) return
     try {
       await setCategory.mutateAsync({ mediaId: item.id, category })
-      toast.success(`Moved to ${titleCase(category)}`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Couldn’t change the room. Please try again.')
     }

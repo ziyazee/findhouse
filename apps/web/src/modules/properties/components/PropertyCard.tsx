@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { Bath, EllipsisVertical, ImageOff, Images, MapPin, Ruler } from 'lucide-react'
+import { Bath, EllipsisVertical, Eye, ImageOff, Images, MapPin, Ruler } from 'lucide-react'
 import { Menu, type MenuItem } from '@/shared/components/Menu'
 import { Skeleton } from '@/shared/components/Card'
 import { STATUS_TO_DB, coverUrl, formatDate, formatRent, placeOf } from '../listingStatus'
@@ -9,6 +9,7 @@ import { VisibilityToggle } from './VisibilityToggle'
 import { VisibilitySwitch } from './VisibilitySwitch'
 import { shareOnWhatsApp } from '../shareProperty'
 import { WhatsAppIcon } from '@/modules/property-site/components/ContactBar'
+import { usePropertyViews } from '@/modules/performance/usePropertyViews'
 import { useMySite } from '@/modules/broker-site/useBrokerSite'
 import type { Property, PropertyStatus } from '../property.types'
 import styles from './PropertyCard.module.css'
@@ -43,6 +44,18 @@ export function PropertyCard({ property: p, menuItems, compact = false, onStatus
   const img = coverUrl(p)
   const photos = p.media.filter((m) => m.mediaType === 'image').length
   const site = useMySite()
+  const counts = usePropertyViews().of(p.id)
+
+  const shareButton = (
+    <button
+      type="button"
+      className={styles.shareBtn}
+      onClick={() => shareOnWhatsApp(p, site.listingUrl(p))}
+      aria-label={`Share ${p.title} on WhatsApp`}
+    >
+      <WhatsAppIcon />
+    </button>
+  )
 
   return (
     <article className={`${styles.card} ${compact ? styles.compact : ''}`}>
@@ -56,6 +69,11 @@ export function PropertyCard({ property: p, menuItems, compact = false, onStatus
           </div>
         )}
         <div className={styles.badge}><ListingStatusBadge property={p} />{!onStatusChange && <VisibilityToggle property={p} />}</div>
+        <span className={styles.viewCount} title="Views">
+          <Eye size={12} aria-hidden="true" />
+          {counts.views}
+          <span className="sr-only"> views</span>
+        </span>
         {photos > 0 && (
           <span className={styles.photoCount}>
             <Images size={12} aria-hidden="true" />
@@ -70,6 +88,7 @@ export function PropertyCard({ property: p, menuItems, compact = false, onStatus
           <h3 className={styles.title}>
             <Link to={`/properties/${p.id}`} className={styles.link}>{p.title}</Link>
           </h3>
+          {compact && shareButton}
           {/* Temporarily hidden: the "..." actions menu. Set SHOW_CARD_MENU to true to bring back. */}
           {SHOW_CARD_MENU && !compact && menuItems && (
             <Menu
@@ -95,14 +114,7 @@ export function PropertyCard({ property: p, menuItems, compact = false, onStatus
             <span className={styles.price}>{p.price ? formatRent(p) : 'Rent not set'}</span>
             <span className={styles.date}>Posted on: {formatDate(p.createdAt)}</span>
           </div>
-          <button
-            type="button"
-            className={styles.shareBtn}
-            onClick={() => shareOnWhatsApp(p, site.listingUrl(p))}
-            aria-label={`Share ${p.title} on WhatsApp`}
-          >
-            <WhatsAppIcon />
-          </button>
+          {!compact && shareButton}
         </div>
 
         {/* Temporarily hidden: visibility switch + status buttons. Set to true to bring back. */}

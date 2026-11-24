@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Bath, BedDouble, ChevronDown, Copy, Ellipsis, ExternalLink, FilePen, Globe, Images, Lock, MapPin, Ruler, SearchX, Share2, Sofa, Trash2, TriangleAlert } from 'lucide-react'
+import { Bath, BedDouble, ChevronDown, Copy, Ellipsis, ExternalLink, Eye, FilePen, Globe, Images, Lock, MapPin, Ruler, SearchX, Share2, Sofa, Trash2, TriangleAlert } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { ListingTypeBadge } from '@/shared/components/Badge'
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
@@ -23,6 +23,7 @@ import { ListingStatusBadge } from '../components/ListingStatusBadge'
 import { VisibilitySwitch } from '../components/VisibilitySwitch'
 import { VisibilityBadge } from '../components/VisibilityBadge'
 import { hiddenReason } from '../visibility'
+import { usePropertyViews } from '@/modules/performance/usePropertyViews'
 import type { UpdatePropertyInput } from '../property.types'
 import styles from './PropertyPage.module.css'
 
@@ -36,6 +37,7 @@ export default function PropertyPage() {
   const [tab, setTab] = useState<Tab>('details')
 
   const { data: property, isLoading, isError, refetch } = useProperty(id)
+  const propertyCounts = usePropertyViews()
   const { mutateAsync: update, isPending: saving } = useUpdateProperty(id!)
   const actions = usePropertyActions(() => navigate('/properties'))
   const site = useMySite()
@@ -147,6 +149,10 @@ export default function PropertyPage() {
             <ListingTypeBadge type={property.listingType} />
             <ListingStatusBadge property={property} />
             <VisibilityBadge property={property} />
+            <span className={styles.viewsChip}>
+              <Eye size={14} aria-hidden="true" />
+              {propertyCounts.of(property.id).views} views
+            </span>
           </div>
           <h1 className={styles.sheetTitle}>{property.title}</h1>
           {placeOf(property) && <p className={styles.sheetPlace}><MapPin size={14} aria-hidden="true" />{placeOf(property)}</p>}

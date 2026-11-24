@@ -28,6 +28,8 @@
 
 .sheetHead { grid-area: head; min-width: 0; }
 
+.viewsChip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-sm); font-weight: 600; color: var(--color-fg3); }
+
 .eyebrow {
   display: flex;
   align-items: center;
@@ -199,7 +201,7 @@
 .tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .tab {
@@ -281,7 +283,7 @@
   .segment button { flex: 1; height: 40px; }
   .notice { flex-wrap: wrap; padding: 12px 14px; }
   .noticeAction { height: 40px; }
-  .tabs { margin-bottom: 16px; }
+  .tabs { margin-bottom: 12px; }
   .tab { height: 44px; flex: 1; }
   .tabLong { display: none; }
 }

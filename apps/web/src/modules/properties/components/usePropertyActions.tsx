@@ -8,12 +8,6 @@ import { STATUS_TO_DB } from '../listingStatus'
 import type { Property, PropertyStatus } from '../property.types'
 import { useMySite } from '@/modules/broker-site/useBrokerSite'
 
-const STATUS_DONE: Record<PropertyStatus, string> = {
-  available: 'Marked as active',
-  rented: 'Marked as rented',
-  sold: 'Marked as inactive',
-}
-
 export function usePropertyActions(onDeleted?: () => void) {
   const [toDelete, setToDelete] = useState<Property | null>(null)
   const del = useDeleteProperty()
@@ -24,7 +18,6 @@ export function usePropertyActions(onDeleted?: () => void) {
   async function changeStatus(p: Property, status: PropertyStatus) {
     try {
       await setStatus.mutateAsync({ id: p.id, status })
-      toast.success(`${STATUS_DONE[status]}: ${p.title}`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not update the status')
     }
@@ -33,7 +26,6 @@ export function usePropertyActions(onDeleted?: () => void) {
   async function changeVisibility(p: Property, isPublic: boolean) {
     try {
       await setVisibility.mutateAsync({ id: p.id, isPublic })
-      toast.success(`${isPublic ? 'Now public' : 'Now private'}: ${p.title}`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not change who can see it')
     }

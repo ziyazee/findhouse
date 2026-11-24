@@ -6,7 +6,6 @@ import { Card, CardHeader, } from '@/shared/components/Card'
 import { Item, Reveal } from '@/shared/components/Motion'
 import { PageHero } from '@/shared/components/PageHero/PageHero'
 import { heroBody } from '@/shared/components/PageHero/heroClasses'
-import { toast } from '@/shared/components/toastStore'
 import { useAuth, useSignOut } from '@/modules/auth/useAuth'
 import { setPropertiesView, usePropertiesView, type PropertiesView } from '@/modules/properties/viewPreference'
 import { THEMES, setTheme, useTheme } from '@/shared/theme'
@@ -21,7 +20,6 @@ export default function SettingsPage() {
 
   function chooseView(v: PropertiesView) {
     setPropertiesView(v)
-    toast.success(`Properties will open in ${v === 'table' ? 'list' : 'grid'} view`)
   }
 
   return (
