@@ -1,7 +1,7 @@
 .kpis {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -29,14 +29,15 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.8);
 }
-.tint_mint     { background: linear-gradient(140deg, rgba(241, 249, 245, 0.94), rgba(221, 240, 231, 0.94)); }
-.tint_green    { background: linear-gradient(140deg, rgba(244, 250, 241, 0.94), rgba(228, 243, 225, 0.94)); }
-.tint_lavender { background: linear-gradient(140deg, var(--tint-lavender-glass-a), var(--tint-lavender-glass-b)); }
-.tint_peach    { background: linear-gradient(140deg, rgba(254, 247, 240, 0.94), rgba(252, 234, 220, 0.94)); }
-.tint_mint .kpiIcon     { color: var(--tint-mint-fg); }
-.tint_green .kpiIcon    { color: var(--tint-green-fg); }
-.tint_lavender .kpiIcon { color: var(--tint-lavender-fg); }
-.tint_peach .kpiIcon    { color: var(--tint-peach-fg); }
+/* The original soft cards, in four different colours: blue, purple, green, orange */
+.tint_blue   { background: linear-gradient(140deg, rgba(240, 246, 254, 0.94), rgba(214, 229, 252, 0.94)); }
+.tint_purple { background: linear-gradient(140deg, rgba(247, 243, 254, 0.94), rgba(229, 219, 252, 0.94)); }
+.tint_green  { background: linear-gradient(140deg, rgba(241, 250, 244, 0.94), rgba(212, 241, 222, 0.94)); }
+.tint_orange { background: linear-gradient(140deg, rgba(255, 247, 238, 0.94), rgba(253, 227, 200, 0.94)); }
+.tint_blue .kpiIcon   { color: #2563eb; }
+.tint_purple .kpiIcon { color: #7c3aed; }
+.tint_green .kpiIcon  { color: #16a34a; }
+.tint_orange .kpiIcon { color: #ea7a12; }
 
 .kpiValue {
   font-size: 30px;
@@ -97,7 +98,7 @@
 .rank { list-style: none; display: flex; flex-direction: column; }
 .rank li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 80px 80px 90px;
+  grid-template-columns: minmax(0, 1fr) 80px 90px;
   align-items: center;
   gap: 16px;
   padding: 12px 0;
@@ -125,7 +126,6 @@
 
 @media (max-width: 1100px) {
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kpis > :last-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 860px) {
@@ -137,7 +137,7 @@
   .kpi { padding: 14px; border-radius: 18px; }
   .kpiIcon { width: 36px; height: 36px; }
   .kpiValue { font-size: 22px; }
-  .rank li { grid-template-columns: minmax(0, 1fr) 44px 44px 64px; gap: 8px; }
+  .rank li { grid-template-columns: minmax(0, 1fr) 44px 64px; gap: 8px; }
 }
 
 @media (max-width: 760px) {

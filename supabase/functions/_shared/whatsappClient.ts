@@ -34,9 +34,9 @@ export async function downloadWAMedia(mediaId: string): Promise<{ bytes: Uint8Ar
   return { bytes, mimeType: meta.mime_type }
 }
 
-/** Sends a text message to a WhatsApp number. */
-export async function sendWAMessage(toNumber: string, text: string): Promise<void> {
-  await sendWA(toNumber, { type: 'text', text: { body: text, preview_url: true } })
+/** Sends a text message to a WhatsApp number. Links get a preview card unless `preview` is false. */
+export async function sendWAMessage(toNumber: string, text: string, preview = true): Promise<void> {
+  await sendWA(toNumber, { type: 'text', text: { body: text, preview_url: preview } })
 }
 
 async function sendWA(toNumber: string, message: Record<string, unknown>): Promise<void> {

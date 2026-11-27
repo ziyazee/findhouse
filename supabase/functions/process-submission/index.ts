@@ -17,8 +17,8 @@ const APP_URL = Deno.env.get('APP_URL') ?? 'https://findhouse.in'
 const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || 'findhouse.in'
 
 /** WhatsApp draws the link preview card from the listing page's preview tags (apps/web/functions/p/[slug].ts). */
-async function sendText(to: string, body: string): Promise<void> {
-  await sendWAMessage(to, body).catch((err) => console.error('[process-submission] WhatsApp reply failed:', err))
+async function sendText(to: string, body: string, preview = true): Promise<void> {
+  await sendWAMessage(to, body, preview).catch((err) => console.error('[process-submission] WhatsApp reply failed:', err))
 }
 
 /** Before the link is sent, so WhatsApp finds the card. If it fails the link still goes; the preview shows the cover photo. */
@@ -165,7 +165,10 @@ Deno.serve(async (req: Request) => {
     }
 
     await makePreviewCard(supabaseUrl, serviceKey, property.id)
+    // Two messages, in this order: the listing link alone, so WhatsApp shows its preview card, then the link to
+    // manage it in the workspace. The second has no preview: the workspace sits behind a login.
     await sendText(session.sender_phone, listingUrl({ shortId: property.short_id, title: extracted.title }, APP_URL, SITE_DOMAIN, broker?.subdomain))
+    await sendText(session.sender_phone, `Manage your website here: ${APP_URL.replace(/\/+$/, '')}/properties/${property.id}`, false)
 
     // ── 8. Classify property images (fire-and-forget) ────────────────────────
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {

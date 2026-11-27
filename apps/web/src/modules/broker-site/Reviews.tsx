@@ -91,13 +91,21 @@ export function ReviewItem({ review: r, onDelete, deleting }: { review: Review; 
         <span className={styles.who}>{r.name ?? 'Visitor'}</span>
         <time className={styles.when} dateTime={r.createdAt}>{dateFormat.format(new Date(r.createdAt))}</time>
       </div>
-      {onDelete && (
-        <button type="button" className={styles.deleteBtn} disabled={deleting} onClick={onDelete} aria-label={`Delete review by ${r.name ?? 'Visitor'}`}>
-          <Trash2 size={14} aria-hidden="true" />
-          {deleting ? 'Deleting…' : 'Delete'}
-        </button>
-      )}
-      <span role="img" aria-label={`${r.rating} out of 5 stars`}><Stars value={r.rating} /></span>
+      <div className={styles.itemRow}>
+        <span role="img" aria-label={`${r.rating} out of 5 stars`}><Stars value={r.rating} /></span>
+        {onDelete && (
+          <button
+            type="button"
+            className={styles.deleteBtn}
+            disabled={deleting}
+            onClick={onDelete}
+            aria-label={`Delete review by ${r.name ?? 'Visitor'}`}
+            title="Delete review"
+          >
+            <Trash2 size={16} aria-hidden="true" />
+          </button>
+        )}
+      </div>
       {r.comment && <p className={styles.comment}>{r.comment}</p>}
     </li>
   )

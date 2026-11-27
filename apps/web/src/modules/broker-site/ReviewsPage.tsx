@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Star, TriangleAlert } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Card, EmptyState } from '@/shared/components/Card'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
+import { toast } from '@/shared/components/toastStore'
 import { Item, Reveal } from '@/shared/components/Motion'
 import { PageHero } from '@/shared/components/PageHero/PageHero'
 import { heroBody } from '@/shared/components/PageHero/heroClasses'
 import { useAuth } from '@/modules/auth/useAuth'
-import { reviewService } from './ReviewService'
+import { reviewService, type Review } from './ReviewService'
 import { ReviewItem, Summary, reviewKey } from './Reviews'
 import styles from './Reviews.module.css'
 
@@ -22,9 +25,15 @@ export default function ReviewsPage() {
   const data = reviews.data
 
   const queryClient = useQueryClient()
+  const [toDelete, setToDelete] = useState<Review | null>(null)
   const remove = useMutation({
     mutationFn: (id: number) => reviewService.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: reviewKey(brokerId) }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: reviewKey(brokerId) })
+      setToDelete(null)
+      toast.success('Review deleted')
+    },
+    onError: () => toast.error('Couldn’t delete that review. Try again.'),
   })
 
   return (
@@ -32,7 +41,7 @@ export default function ReviewsPage() {
       <PageHero title="Reviews" subtitle="What visitors say about you on your public page." />
       <Reveal className={heroBody} delay={0.2}>
         <Item>
-          <Card>
+          <Card padded>
             {reviews.isError ? (
               <EmptyState
                 icon={<TriangleAlert size={20} />}
@@ -62,17 +71,31 @@ export default function ReviewsPage() {
                     <ReviewItem
                       key={r.id}
                       review={r}
-                      deleting={remove.isPending && remove.variables === r.id}
-                      onDelete={() => { if (window.confirm('Delete this review? This can’t be undone.')) remove.mutate(r.id) }}
+                      onDelete={() => setToDelete(r)}
                     />
                   ))}
                 </ul>
-                {remove.isError && <p className={styles.error} role="alert">Couldn’t delete that review. Try again.</p>}
               </div>
             )}
           </Card>
         </Item>
       </Reveal>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        tone="danger"
+        title="Delete this review?"
+        description={
+          <>
+            {toDelete?.name ? <>The {toDelete.rating}-star review by <strong>{toDelete.name}</strong> will</> : <>This review will</>} be removed
+            from your public page. This can’t be undone.
+          </>
+        }
+        confirmLabel="Delete review"
+        loading={remove.isPending}
+        onConfirm={() => toDelete && remove.mutate(toDelete.id)}
+        onCancel={() => setToDelete(null)}
+      />
     </>
   )
 }

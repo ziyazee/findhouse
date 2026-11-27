@@ -170,7 +170,7 @@ function normalizePhone(phone: string): string | null {
 }
 
 /** WhatsApp draws the link preview card from the listing page's preview tags (apps/web/functions/p/[slug].ts). */
-async function sendText(phone: string, body: string): Promise<void> {
+async function sendText(phone: string, body: string, preview = true): Promise<void> {
   const waToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
   const waPhoneId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
   if (!waToken || !waPhoneId) {
@@ -185,7 +185,7 @@ async function sendText(phone: string, body: string): Promise<void> {
   const res = await fetch(`https://graph.facebook.com/v21.0/${waPhoneId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${waToken}` },
-    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body, preview_url: true } }),
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body, preview_url: preview } }),
   }).catch((err) => { console.error('[process-submission] WhatsApp reply failed:', err); return null })
   if (!res) return
   const answer = await res.text()
@@ -313,7 +313,10 @@ Deno.serve(async (req: Request) => {
     }
 
     await makePreviewCard(supabaseUrl, serviceKey, property.id)
+    // Two messages, in this order: the listing link alone, so WhatsApp shows its preview card, then the link to
+    // manage it in the workspace. The second has no preview: the workspace sits behind a login.
     await sendText(session.sender_phone, listingUrl({ shortId: property.short_id, title: extracted.title }, APP_URL, SITE_DOMAIN, broker?.subdomain))
+    await sendText(session.sender_phone, `Manage your website here: ${APP_URL.replace(/\/+$/, '')}/properties/${property.id}`, false)
 
     fetch(`${supabaseUrl}/functions/v1/classify-images`, {
       method: 'POST',

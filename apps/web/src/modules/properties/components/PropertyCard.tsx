@@ -50,7 +50,7 @@ export function PropertyCard({ property: p, menuItems, compact = false, onStatus
     <button
       type="button"
       className={styles.shareBtn}
-      onClick={() => shareOnWhatsApp(p, site.listingUrl(p))}
+      onClick={() => shareOnWhatsApp(site.listingUrl(p))}
       aria-label={`Share ${p.title} on WhatsApp`}
     >
       <WhatsAppIcon />

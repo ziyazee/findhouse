@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, ChartColumn, Eye, KeyRound, MessageCircle, Phone, TriangleAlert } from 'lucide-react'
+import { Building2, ChartColumn, Eye, MessageCircle, Phone, TriangleAlert } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/shared/components/Button'
 import { Card, CardHeader, EmptyState, Skeleton } from '@/shared/components/Card'
@@ -28,7 +28,6 @@ export default function PerformancePage() {
   const ranked = useMemo(() => perProperty(rows, properties), [rows, properties])
 
   const listed = properties.length
-  const rented = properties.filter((p) => p.status === 'rented').length
   const active = properties.filter((p) => p.status === 'available').length
 
   const isLoading = stats.isLoading || props.isLoading
@@ -43,7 +42,7 @@ export default function PerformancePage() {
       <PageHero
         overlap={showData}
         title="Performance"
-        subtitle="How your listings are doing: views, properties listed, rented, and who contacted you."
+        subtitle="How your listings are doing: views, properties listed, and who contacted you."
       />
 
       {isError ? (
@@ -66,11 +65,10 @@ export default function PerformancePage() {
       ) : (
         <>
           <motion.section className={styles.kpis} aria-label="Key figures" variants={stagger(0.08, 0.15)} initial={entranceInitial} animate="show">
-            <Kpi tint="mint" icon={<Eye size={18} />} label="Views" value={String(totals.views)} sub="Times a listing page was opened" loading={isLoading} />
-            <Kpi tint="lavender" icon={<Building2 size={18} />} label="Properties listed" value={String(listed)} sub={`${active} active right now`} loading={isLoading} />
-            <Kpi tint="peach" icon={<KeyRound size={18} />} label="Rented" value={String(rented)} sub="Properties marked as rented" loading={isLoading} />
+            <Kpi tint="blue" icon={<Eye size={18} />} label="Views" value={String(totals.views)} sub="Times a listing page was opened" loading={isLoading} />
+            <Kpi tint="purple" icon={<Building2 size={18} />} label="Properties listed" value={String(listed)} sub={`${active} active right now`} loading={isLoading} />
             <Kpi tint="green" icon={<MessageCircle size={18} />} label="WhatsApp" value={String(totals.whatsapp)} sub="Contacted on WhatsApp" loading={isLoading} />
-            <Kpi tint="mint" icon={<Phone size={18} />} label="Phone calls" value={String(totals.calls)} sub="Contacted by phone call" loading={isLoading} />
+            <Kpi tint="orange" icon={<Phone size={18} />} label="Phone calls" value={String(totals.calls)} sub="Contacted by phone call" loading={isLoading} />
           </motion.section>
 
           <Reveal className={`${styles.grid} ${entranceInitial === false ? styles.still : ''}`} gap={0.1} delay={0.35}>
@@ -117,7 +115,7 @@ export default function PerformancePage() {
                   ) : (
                     <ul className={styles.rank}>
                       <li className={styles.rankHead} aria-hidden="true">
-                        <span>Property</span><span>Views</span><span>Shares</span><span>Enquiries</span>
+                        <span>Property</span><span>Views</span><span>Enquiries</span>
                       </li>
                       {ranked.map((p) => (
                         <li key={p.id}>
@@ -126,7 +124,6 @@ export default function PerformancePage() {
                             <span className={styles.rankTrack}><span className={styles.rankBar} style={{ width: `${(p.views / maxViews) * 100}%` }} /></span>
                           </span>
                           <span className={styles.num} data-label="Views">{p.views}</span>
-                          <span className={styles.num} data-label="Shares">{p.shares}</span>
                           <span className={`${styles.num} ${styles.strong}`} data-label="Enquiries">{p.enquiries}</span>
                         </li>
                       ))}
@@ -143,7 +140,7 @@ export default function PerformancePage() {
 }
 
 function Kpi({ tint, icon, label, value, sub, loading }: {
-  tint: 'mint' | 'green' | 'lavender' | 'peach'
+  tint: 'blue' | 'purple' | 'green' | 'orange'
   icon: ReactNode
   label: string
   value: string
