@@ -32,6 +32,20 @@ async function makePreviewCard(supabaseUrl: string, serviceKey: string, property
   if (res && !res.ok) console.error(`[process-submission] preview-card answered ${res.status}: ${await res.text()}`)
 }
 
+/**
+ * Waits for the photos to be sorted into rooms (it also picks the cover photo), so the broker hears about the listing
+ * only once it is complete. If it fails or runs long we carry on anyway: the reply must not be lost.
+ */
+async function classifyImages(supabaseUrl: string, serviceKey: string, propertyId: string): Promise<void> {
+  const res = await fetch(`${supabaseUrl}/functions/v1/classify-images`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+    body: JSON.stringify({ propertyId }),
+    signal: AbortSignal.timeout(110_000),
+  }).catch((err) => { console.error('[process-submission] Image classification failed:', err); return null })
+  if (res && !res.ok) console.error(`[process-submission] classify-images answered ${res.status}: ${await res.text()}`)
+}
+
 async function loadBroker(brokerId: string | null): Promise<{ plan: string | null; subdomain: string | null } | null> {
   if (!brokerId) return null
   const { data } = await db.from('brokers').select('plan, subdomain').eq('id', brokerId).maybeSingle()
@@ -164,21 +178,13 @@ Deno.serve(async (req: Request) => {
       if (trialError) console.error(`[process-submission] Could not mark trial used: ${trialError.message}`)
     }
 
+    // Photos first (this also picks the cover), then the preview card made from that cover, then the reply.
+    await classifyImages(supabaseUrl, serviceKey, property.id)
     await makePreviewCard(supabaseUrl, serviceKey, property.id)
     // Two messages, in this order: the listing link alone, so WhatsApp shows its preview card, then the link to
     // manage it in the workspace. The second has no preview: the workspace sits behind a login.
     await sendText(session.sender_phone, listingUrl({ shortId: property.short_id, title: extracted.title }, APP_URL, SITE_DOMAIN, broker?.subdomain))
     await sendText(session.sender_phone, `Manage your website here: ${APP_URL.replace(/\/+$/, '')}/properties/${property.id}`, false)
-
-    // ── 8. Classify property images (fire-and-forget) ────────────────────────
-    fetch(`${supabaseUrl}/functions/v1/classify-images`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({ propertyId: property.id }),
-    }).catch((err) => console.error('[process-submission] Image classification failed:', err))
 
     return new Response(
       JSON.stringify({ ok: true, propertyId: property.id, slug: property.slug }),
