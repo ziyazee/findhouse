@@ -56,7 +56,6 @@
   backdrop-filter: blur(12px);
   color: #fff;
   text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
   transition: background var(--dur-fast) var(--ease);
 }
 .glassBtn:hover, .glassBtn[aria-expanded='true'] { background: rgba(255, 255, 255, 0.3); }
@@ -109,7 +108,6 @@
   place-items: center;
   flex-shrink: 0;
   color: var(--color-accent);
-  -webkit-tap-highlight-color: transparent;
   transition: background var(--dur-fast) var(--ease);
 }
 .squareBtn:hover { background: #fff; }

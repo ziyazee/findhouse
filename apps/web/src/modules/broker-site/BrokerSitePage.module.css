@@ -110,7 +110,6 @@
   white-space: nowrap;
   text-decoration: none;
   font-variant-numeric: tabular-nums;
-  -webkit-tap-highlight-color: transparent;
   transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 .callBtn:active, .whatsappBtn:active { transform: scale(0.98); }
@@ -165,7 +164,6 @@
   flex-direction: column;
   color: inherit;
   text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
 }
 .card:focus-visible { outline: none; }
 .card:focus-visible .cardImage { outline: 3px solid var(--color-accent); outline-offset: 3px; }

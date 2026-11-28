@@ -104,7 +104,6 @@
   font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
   transition: background var(--dur-fast) var(--ease);
 }
 .glassBtn:hover, .glassBtn:active { background: rgba(255, 255, 255, 0.28); }
@@ -394,7 +393,6 @@
   font-size: var(--text-base);
   font-weight: 500;
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
   transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .filter span { color: var(--color-fg3); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
@@ -417,7 +415,6 @@
   border-radius: 10px;
   background: var(--color-surface);
   cursor: zoom-in;
-  -webkit-tap-highlight-color: transparent;
 }
 .tile img, .tile video { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--color-surface); transition: transform 500ms var(--ease); }
 .tile video { pointer-events: none; }
@@ -569,7 +566,6 @@
   border-radius: 10px;
   background: var(--color-surface);
   cursor: zoom-in;
-  -webkit-tap-highlight-color: transparent;
 }
 .tourTile img, .tourTile video { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 500ms var(--ease); }
 .tourTile video { pointer-events: none; }
@@ -728,7 +724,6 @@
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
   transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 .callBtn:active, .whatsappBtn:active { transform: scale(0.98); }

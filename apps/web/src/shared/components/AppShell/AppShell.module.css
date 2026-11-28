@@ -323,7 +323,6 @@
     font-weight: 600;
     color: var(--color-fg2);
     text-decoration: none;
-    -webkit-tap-highlight-color: transparent;
     transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
   }
   .tab:active .tabIcon { transform: scale(0.92); }

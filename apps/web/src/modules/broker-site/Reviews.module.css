@@ -64,7 +64,6 @@
   border: 0;
   border-radius: 12px;
   background: transparent;
-  -webkit-tap-highlight-color: transparent;
 }
 .pickLabel { margin-left: 10px; color: var(--color-fg2); font-size: var(--text-sm); font-weight: 600; }
 
