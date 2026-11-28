@@ -48,6 +48,7 @@
 }
 
 .tabs {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
@@ -57,7 +58,22 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
+/* The white pill under the active tab. Half the width, minus half the gap; it slides by its own width plus the gap. */
+.tabPill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 12px) / 2);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs);
+  transition: transform 340ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
 .tab {
+  position: relative;
   padding: 9px 12px;
   text-align: center;
   font-size: var(--text-base);
@@ -65,9 +81,24 @@
   color: var(--color-fg2);
   text-decoration: none;
   border-radius: var(--radius-sm);
+  transition: color 240ms ease;
 }
 .tab:hover { color: var(--color-fg); }
-.tabActive { color: var(--color-fg); background: var(--color-surface); box-shadow: var(--shadow-xs); }
+.tabActive { color: var(--color-fg); }
+
+/* The box under the tabs: its height glides between Sign in and Register. The 6px of padding inside, cancelled by the
+   negative margin, keeps focus rings from being clipped by overflow. */
+.paneBox {
+  overflow: hidden; /* older browsers */
+  overflow: clip;   /* clips without being scrollable, so focusing a field mid-slide can't shift the form sideways */
+  margin: -6px;
+}
+.paneInner { padding: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tabPill { transition: none; }
+  .tab { transition: none; }
+}
 
 .fieldNote { margin: -8px 0 0; font-size: 12px; line-height: 1.5; color: var(--color-fg3); }
 .sitePreview { color: var(--color-accent); font-weight: 600; word-break: break-all; }

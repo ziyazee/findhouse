@@ -93,19 +93,23 @@
   .legal a { color: var(--color-fg3); }
 }
 
+/* Anchored to the top, not centred: Sign in and Register differ in height, and centring would move the tabs up and
+   down every time you switch. Now the tabs stay put and only what is under them changes. */
 .formPanel {
   flex: 1 1 50%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 40px 24px;
+  padding: clamp(32px, 14vh, 128px) 24px 40px;
   background: var(--color-bg);
 }
 .formInner { width: 100%; max-width: 380px; }
 
-.mobileLogo { display: none; margin-bottom: 32px; }
+.mobileLogo { display: none; }
 
+/* On a phone the logo is the first thing in the panel, so it sits at the top and the breathing room goes under it. */
 @media (max-width: 900px) {
   .brand { display: none; }
-  .mobileLogo { display: flex; }
+  .formPanel { padding-top: 32px; }
+  .mobileLogo { display: flex; margin-bottom: clamp(32px, 9vh, 80px); }
 }

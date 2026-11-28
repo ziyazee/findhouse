@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 import { siteSubdomain } from '@/lib/site'
 import { BrokerRoute, GuestRoute } from '@/modules/auth/guards'
+import { AuthShell } from '@/modules/auth/components/AuthShell'
 import { AppShell } from '@/shared/components/AppShell/AppShell'
 import { PageSpinner } from '@/shared/components/PageSpinner'
 import { brokerPages } from './brokerPages'
@@ -29,8 +30,6 @@ function withSuspense(el: JSX.Element) {
   return <Suspense fallback={<PageSpinner />}>{el}</Suspense>
 }
 
-const guestLogin = <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>
-
 const routes: RouteObject[] = [
   // Public property site
   { path: '/p/:slug', element: withSuspense(<PropertySitePage />) },
@@ -38,9 +37,6 @@ const routes: RouteObject[] = [
   // Current listing link: /<shortId>/<name>. A bare /<uuid> is an older link. Workspace routes like /properties/new are more specific and win.
   { path: '/:shortId/:name?', element: withSuspense(<PropertySitePage />) },
 
-  // Guest only
-  { path: '/login', element: guestLogin },
-  { path: '/register', element: <GuestRoute>{withSuspense(<RegisterPage />)}</GuestRoute> },
   // Static path, so it is not treated as a listing short id.
   { path: '/privacy', element: withSuspense(<PrivacyPage />) },
 
@@ -74,9 +70,17 @@ const routes: RouteObject[] = [
     ? [{ path: '/test/pipeline', lazy: async () => ({ Component: (await import('@/modules/test-pipeline/pages/PipelineTestPage')).default }) }]
     : []),
 
-  // Fallback
-  { path: '/', element: guestLogin },
-  { path: '*', element: guestLogin },
+  // Guest only. Sign in and Register share one shell that stays mounted, so switching between them can animate.
+  // The root and anything unknown show Sign in.
+  {
+    element: <GuestRoute><AuthShell /></GuestRoute>,
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
+      { path: '/', element: <LoginPage /> },
+      { path: '*', element: <LoginPage /> },
+    ],
+  },
 ]
 
 // A broker's own site (ravi-homes.findhouse.in): their page and their listings.

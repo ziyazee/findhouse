@@ -1,7 +1,5 @@
 import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AuthLayout } from '../components/AuthLayout'
-import { AuthTabs } from '../components/AuthTabs'
 import { Input } from '@/shared/components/Input'
 import { Button } from '@/shared/components/Button'
 import { useAuth } from '../useAuth'
@@ -57,8 +55,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout>
-      <AuthTabs />
+    <>
       <div className={styles.formHeader}>
         <h1 className={styles.title}>Welcome back</h1>
         <p className={styles.subtitle}>Sign in with your WhatsApp number and password.</p>
@@ -117,7 +114,7 @@ export default function LoginPage() {
           New here? Ask FindHouse to add your WhatsApp number, then use the Register tab.
         </span>
       </div>
-    </AuthLayout>
+    </>
   )
 }
 

@@ -1,7 +1,5 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AuthLayout } from '../components/AuthLayout'
-import { AuthTabs } from '../components/AuthTabs'
 import { Input } from '@/shared/components/Input'
 import { Button } from '@/shared/components/Button'
 import { env } from '@/lib/env'
@@ -91,8 +89,7 @@ export default function RegisterPage() {
   )
 
   return (
-    <AuthLayout>
-      <AuthTabs />
+    <>
       <div className={styles.formHeader}>
         <h1 className={styles.title}>Create your account</h1>
         <p className={styles.subtitle}>
@@ -164,6 +161,6 @@ export default function RegisterPage() {
           <Button type="submit" fullWidth size="lg" loading={loading}>Create account</Button>
         </form>
       )}
-    </AuthLayout>
+    </>
   )
 }
