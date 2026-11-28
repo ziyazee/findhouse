@@ -60,12 +60,7 @@ Deno.serve(async (req: Request) => {
     })
   }
 
-  if (property.image_classification_status === 'COMPLETED') {
-    console.log(`[classify-images] Already COMPLETED for ${propertyId} — nothing to do`)
-    return new Response(JSON.stringify({ ok: true, skipped: 'already_completed' }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
+  // COMPLETED still runs: photos that arrived after "done" are added later and only those get sorted.
 
   // ── 2. Mark PROCESSING ────────────────────────────────────────────────────
   await db
@@ -267,7 +262,8 @@ async function classifyProperty(propertyId: string): Promise<ClassifyResult> {
   }
 
   // ── Update cover image ───────────────────────────────────────────────────
-  if (result.cover_image_id) {
+  // Only from the first batch: a late photo is compared with nothing, and the cover is already on the preview card.
+  if (result.cover_image_id && skippedCount === 0) {
     // Clear existing cover flag on all images for this property, then set new one
     await db
       .from('property_media')

@@ -9,6 +9,11 @@ const GREETING_PATTERNS = [
   /^(ok|okay|k|fine|sure|noted|thanks|thank you|thx|ty)[\s!.,]*$/i,
 ]
 
+/** "done" must be exact (case-insensitive, optional trailing punctuation). */
+export function isDoneText(text: string): boolean {
+  return /^done[.!,\s]*$/i.test(text.trim())
+}
+
 export function classifyMessage(message: WAMessage): MessageClassification {
   // Media messages are always property info
   if (message.type !== 'text') return 'PROPERTY_INFO'
@@ -18,8 +23,7 @@ export function classifyMessage(message: WAMessage): MessageClassification {
 
   if (!trimmed) return 'OTHER'
 
-  // DONE must be exact (case-insensitive, optional trailing punctuation)
-  if (/^done[.!,\s]*$/i.test(trimmed)) return 'DONE'
+  if (isDoneText(trimmed)) return 'DONE'
 
   // Check greeting patterns
   for (const pattern of GREETING_PATTERNS) {

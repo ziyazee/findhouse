@@ -81,6 +81,7 @@ export type Database = {
           media_type: string | null
           mime_type: string | null
           media_storage_path: string | null
+          media_status: 'none' | 'pending' | 'ready' | 'failed'
           whatsapp_timestamp: string | null
           created_at: string
         }

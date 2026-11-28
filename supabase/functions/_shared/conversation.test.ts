@@ -28,16 +28,18 @@ describe('decide', () => {
     expect(decide(trial, 'OTHER', 'none')).toEqual(ignore)
   })
 
-  it('ignores a trial broker while the free listing is built and once it is used', () => {
-    expect(decide(trial, 'PROPERTY_INFO', 'processing')).toEqual(ignore)
-    expect(decide(trial, 'DONE', 'processing')).toEqual(ignore)
-    for (const kind of ['GREETING', 'PROPERTY_INFO', 'DONE', 'OTHER'] as const) {
-      expect(decide(used, kind, 'none')).toEqual(ignore)
+  it('adds details that arrive while a listing is built to it, and ignores another done', () => {
+    for (const broker of [paid, trial]) {
+      expect(decide(broker, 'PROPERTY_INFO', 'processing')).toEqual(store)
+      expect(decide(broker, 'DONE', 'processing')).toEqual(ignore)
+      expect(decide(broker, 'GREETING', 'processing')).toEqual(ignore)
     }
   })
 
-  it('lets paid brokers keep going while a listing is built', () => {
-    expect(decide(paid, 'PROPERTY_INFO', 'processing')).toEqual(store)
+  it('ignores a trial broker once the free listing is sent', () => {
+    for (const kind of ['GREETING', 'PROPERTY_INFO', 'DONE', 'OTHER'] as const) {
+      expect(decide(used, kind, 'none')).toEqual(ignore)
+    }
   })
 })
 

@@ -39,6 +39,18 @@ export async function sendWAMessage(toNumber: string, text: string, preview = tr
   await sendWA(toNumber, { type: 'text', text: { body: text, preview_url: preview } })
 }
 
+/** A message with one tappable button that opens `url`. `label` is at most 20 characters. Only inside the 24-hour reply window. */
+export async function sendWALinkButton(toNumber: string, text: string, label: string, url: string): Promise<void> {
+  await sendWA(toNumber, {
+    type: 'interactive',
+    interactive: {
+      type: 'cta_url',
+      body: { text },
+      action: { name: 'cta_url', parameters: { display_text: label, url } },
+    },
+  })
+}
+
 async function sendWA(toNumber: string, message: Record<string, unknown>): Promise<void> {
   const accessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
   const phoneNumberId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')

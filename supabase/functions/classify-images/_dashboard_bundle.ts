@@ -201,10 +201,7 @@ Deno.serve(async (req: Request) => {
     console.warn(`[classify-images] Already PROCESSING for ${propertyId} — skipping`)
     return new Response(JSON.stringify({ ok: true, skipped: 'already_processing' }), { headers: { 'Content-Type': 'application/json' } })
   }
-  if (property.image_classification_status === 'COMPLETED') {
-    console.log(`[classify-images] Already COMPLETED for ${propertyId} — nothing to do`)
-    return new Response(JSON.stringify({ ok: true, skipped: 'already_completed' }), { headers: { 'Content-Type': 'application/json' } })
-  }
+  // COMPLETED still runs: photos that arrived after "done" are added later and only those get sorted.
 
   await db.from('properties').update({ image_classification_status: 'PROCESSING' }).eq('id', propertyId)
 
@@ -274,8 +271,9 @@ Deno.serve(async (req: Request) => {
       else classifiedCount++
     }
 
-    // Update cover image
-    if (result.cover_image_id) {
+    // Update cover image. Only from the first batch: a late photo is compared with nothing, and the cover is already
+    // on the preview card.
+    if (result.cover_image_id && skippedCount === 0) {
       await db.from('property_media').update({ is_cover: false }).eq('property_id', propertyId).eq('media_type', 'image')
       const { error: coverError } = await db.from('property_media').update({ is_cover: true }).eq('id', result.cover_image_id)
       if (coverError) console.warn(`[classify-images] Failed to set cover: ${coverError.message}`)

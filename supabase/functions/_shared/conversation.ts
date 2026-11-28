@@ -4,7 +4,10 @@
 
 export type Plan = 'trial' | 'paid'
 export type Classification = 'GREETING' | 'DONE' | 'PROPERTY_INFO' | 'OTHER'
-/** The broker's submission: none open, one collecting messages, or one being built after "done". */
+/**
+ * The broker's submission: none open, one collecting messages, or one being built after "done". A submission being
+ * built still takes messages until the reply with its link goes out (a photo can reach us after the "done" behind it).
+ */
 export type SessionState = 'none' | 'collecting' | 'processing'
 
 export interface BrokerState {
@@ -15,18 +18,17 @@ export interface BrokerState {
 export interface Decision {
   /** Keep the message in the broker's submission, opening one if needed. */
   store: boolean
-  /**
-   * Build the listing. The webhook first waits for the messages sent just before "done" to be saved
-   * (they can arrive after it), then closes the submission.
-   */
+  /** Start building the listing now. Messages that arrive while it is built are added to it. */
   finalize: boolean
 }
 
 const ignore: Decision = { store: false, finalize: false }
 
 export function decide(broker: BrokerState, kind: Classification, session: SessionState): Decision {
-  // Trial: anything while the free listing is built, and anything after it, is ignored.
-  if (broker.plan === 'trial' && (broker.trialUsed || session === 'processing')) return ignore
+  // The listing being built takes every detail until its reply goes out; another "done" changes nothing.
+  if (session === 'processing') return kind === 'PROPERTY_INFO' ? { store: true, finalize: false } : ignore
+  // Trial: once the free listing has been sent, everything is ignored.
+  if (broker.plan === 'trial' && broker.trialUsed) return ignore
 
   if (kind === 'PROPERTY_INFO') return { store: true, finalize: false }
   if (kind === 'DONE') return { store: true, finalize: true }

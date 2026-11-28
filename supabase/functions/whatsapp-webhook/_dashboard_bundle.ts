@@ -55,14 +55,16 @@ interface ResolvedBroker { id: string; status: BrokerStatus; plan: Plan; trialUs
 type Plan = 'trial' | 'paid'
 type SessionState = 'none' | 'collecting' | 'processing'
 interface BrokerState { plan: Plan; trialUsed: boolean }
-/** finalize: build the listing, after waiting for the messages sent just before "done" to be saved. */
+/** finalize: start building now. Messages that arrive while it is built are added to it. */
 interface Decision { store: boolean; finalize: boolean }
 
 const ignore: Decision = { store: false, finalize: false }
 
 function decide(broker: BrokerState, kind: MessageClassification, session: SessionState): Decision {
-  // Trial: anything while the free listing is built, and anything after it, is ignored.
-  if (broker.plan === 'trial' && (broker.trialUsed || session === 'processing')) return ignore
+  // The listing being built takes every detail until its reply goes out; another "done" changes nothing.
+  if (session === 'processing') return kind === 'PROPERTY_INFO' ? { store: true, finalize: false } : ignore
+  // Trial: once the free listing has been sent, everything is ignored.
+  if (broker.plan === 'trial' && broker.trialUsed) return ignore
   if (kind === 'PROPERTY_INFO') return { store: true, finalize: false }
   if (kind === 'DONE') return { store: true, finalize: true }
   return ignore
@@ -207,33 +209,41 @@ async function resolveBroker(db: SupabaseClient, phone: string): Promise<Resolve
 
 // ── Session manager ───────────────────────────────────────────────────────────
 
-async function getActiveSession(db: SupabaseClient, brokerId: string): Promise<{ id: string } | null> {
-  const { data } = await db.from('whatsapp_submissions').select('id').eq('broker_id', brokerId).eq('status', 'COLLECTING').maybeSingle()
-  return data ?? null
+// Open while COLLECTING (before "done") and PROCESSING (being built, until the reply goes out). Recording and closing
+// are database functions (migration 022) sharing a per-broker lock, so no message falls between two submissions.
+type OpenSubmission = { id: string; status: 'COLLECTING' | 'PROCESSING' }
+
+/** Keep in step with the 10 minutes in record_submission_message: a build stuck this long no longer holds messages. */
+const PROCESSING_STALE_MS = 10 * 60 * 1000
+
+async function getOpenSession(db: SupabaseClient, brokerId: string): Promise<OpenSubmission | null> {
+  const { data, error } = await db.from('whatsapp_submissions').select('id, status, updated_at').eq('broker_id', brokerId)
+    .in('status', ['COLLECTING', 'PROCESSING']).order('created_at', { ascending: false })
+  if (error) throw new Error(`Failed to read submissions: ${error.message}`)
+  const fresh = Date.now() - PROCESSING_STALE_MS
+  const open = (data ?? []).find((s) => s.status === 'COLLECTING' || Date.parse(s.updated_at) > fresh)
+  return open ? { id: open.id, status: open.status } : null
 }
 
-async function createSession(db: SupabaseClient, brokerId: string, senderPhone: string): Promise<string> {
-  const { data, error } = await db.from('whatsapp_submissions').insert({ broker_id: brokerId, sender_phone: senderPhone, status: 'COLLECTING' }).select('id').single()
-  if (error) {
-    if (error.message.includes('one_active_submission_per_sender') || error.code === '23505') {
-      const existing = await getActiveSession(db, brokerId)
-      if (existing) return existing.id
-    }
-    throw new Error(`Failed to create submission: ${error.message}`)
-  }
-  return data.id
-}
-
-async function addMessageToSession(db: SupabaseClient, sessionId: string, _brokerId: string, msg: ParsedMessage, storagePath: string | null): Promise<void> {
-  const { error } = await db.from('whatsapp_submission_messages').insert({
-    submission_id: sessionId, whatsapp_message_id: msg.waMessageId, message_type: msg.type,
-    text_body: msg.textContent, media_id: msg.waMediaId, media_type: msg.waMediaId ? msg.type : null,
-    mime_type: msg.mimeType, media_storage_path: storagePath, caption: msg.caption,
-    whatsapp_timestamp: msg.receivedAt.toISOString(),
+/** Records a message in the open submission (opening one if `mayOpen`); media starts pending. Null when not recorded. */
+async function recordMessage(db: SupabaseClient, brokerId: string, senderPhone: string, mayOpen: boolean, msg: ParsedMessage): Promise<OpenSubmission | null> {
+  const { data, error } = await db.rpc('record_submission_message', {
+    p_broker_id: brokerId, p_sender_phone: senderPhone, p_may_open: mayOpen,
+    p_message: {
+      whatsapp_message_id: msg.waMessageId, message_type: msg.type, text_body: msg.textContent, caption: msg.caption,
+      media_id: msg.waMediaId, media_type: msg.waMediaId ? msg.type : null, mime_type: msg.mimeType,
+      media_status: msg.waMediaId ? 'pending' : 'none', whatsapp_timestamp: msg.receivedAt.toISOString(),
+    },
   })
-  if (error && !error.message.includes('duplicate') && !error.code?.includes('23505')) {
-    throw new Error(`Failed to store message: ${error.message}`)
-  }
+  if (error) throw new Error(`Failed to record message: ${error.message}`)
+  const row = (data as Array<{ submission_id: string; submission_status: OpenSubmission['status'] }> | null)?.[0]
+  return row ? { id: row.submission_id, status: row.submission_status } : null
+}
+
+async function setMediaResult(db: SupabaseClient, waMessageId: string, storagePath: string | null): Promise<void> {
+  const { error } = await db.from('whatsapp_submission_messages')
+    .update({ media_storage_path: storagePath, media_status: storagePath ? 'ready' : 'failed' }).eq('whatsapp_message_id', waMessageId)
+  if (error) throw new Error(`Failed to save media result: ${error.message}`)
 }
 
 /** False when it was no longer COLLECTING (another "done", or a repeat delivery, got there first). */
@@ -241,46 +251,6 @@ async function finalizeSession(db: SupabaseClient, sessionId: string): Promise<b
   const { data, error } = await db.from('whatsapp_submissions').update({ status: 'PROCESSING', updated_at: new Date().toISOString() })
     .eq('id', sessionId).eq('status', 'COLLECTING').select('id')
   if (error) throw new Error(`Failed to finalize submission: ${error.message}`)
-  return (data?.length ?? 0) > 0
-}
-
-/** "done" waits until the open submission has had no new message for this long… */
-const SETTLE_QUIET_MS = 3000
-/** …or this long at most. */
-const SETTLE_MAX_MS = 20000
-
-/**
- * Each WhatsApp message arrives as its own webhook call and photos take longer to save, so "done" can arrive
- * before the messages sent just before it are stored (or before their submission exists). Waits until the broker's
- * open submission has stopped growing and returns it, or null if none was opened.
- */
-async function waitForSettledSession(db: SupabaseClient, brokerId: string): Promise<string | null> {
-  const started = Date.now()
-  let snapshot = ''
-  let quietSince = started
-  while (Date.now() - started < SETTLE_MAX_MS) {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    const active = await getActiveSession(db, brokerId)
-    const { count } = active
-      ? await db.from('whatsapp_submission_messages').select('id', { count: 'exact', head: true }).eq('submission_id', active.id)
-      : { count: 0 }
-    const now = active ? `${active.id}:${count ?? 0}` : ''
-    if (now !== snapshot) {
-      snapshot = now
-      quietSince = Date.now()
-    } else if (active && Date.now() - quietSince >= SETTLE_QUIET_MS) {
-      return active.id
-    }
-  }
-  return (await getActiveSession(db, brokerId))?.id ?? null
-}
-
-/** A build stuck longer than this no longer counts as in progress. */
-const PROCESSING_STALE_MS = 10 * 60 * 1000
-
-async function hasProcessingSession(db: SupabaseClient, brokerId: string): Promise<boolean> {
-  const { data } = await db.from('whatsapp_submissions').select('id').eq('broker_id', brokerId).eq('status', 'PROCESSING')
-    .gte('updated_at', new Date(Date.now() - PROCESSING_STALE_MS).toISOString()).limit(1)
   return (data?.length ?? 0) > 0
 }
 
@@ -363,59 +333,56 @@ async function handleMessage(msg: WAMessage) {
   const classification = classifyMessage(msg)
   console.log(`[webhook] Classification: ${classification}`)
 
-  const active = await getActiveSession(db, brokerId)
-  const session: SessionState = active
-    ? 'collecting'
-    : broker.plan === 'trial' && await hasProcessingSession(db, brokerId) ? 'processing' : 'none'
-  const decision = decide({ plan: broker.plan, trialUsed: broker.trialUsed }, classification, session)
+  const open = await getOpenSession(db, brokerId)
+  const session: SessionState = !open ? 'none' : open.status === 'PROCESSING' ? 'processing' : 'collecting'
+  const state = { plan: broker.plan, trialUsed: broker.trialUsed }
+  const decision = decide(state, classification, session)
   console.log(`[webhook] ${broker.plan} broker, session ${session}:`, decision)
-
   if (!decision.store) return
-  if (decision.finalize) return buildListing(msg, brokerId, classification)
 
-  let sessionId: string
-  if (active) { sessionId = active.id } else { sessionId = await createSession(db, brokerId, fromNumber); console.log(`[webhook] New session created: ${sessionId}`) }
-
-  let storagePath: string | null = null
+  // Recorded at once, before fetching any photo, so a build in progress knows it is coming.
   const waMediaId = msg.image?.id ?? msg.video?.id ?? msg.document?.id ?? msg.audio?.id ?? null
-  if (waMediaId) {
-    try {
-      const { bytes, mimeType } = await downloadWAMedia(waMediaId)
-      const ext = mimeToExtension(mimeType)
-      const path = `submissions/${sessionId}/${msg.id}.${ext}`
-      const result = await uploadToR2(path, bytes, mimeType)
-      if (!result.success) { console.warn(`[webhook] Media upload failed: ${result.error}`) } else { storagePath = path }
-    } catch (err) { console.warn(`[webhook] Media download failed: ${err}`) }
-  }
-
   const parsed: ParsedMessage = {
     waMessageId: msg.id, fromNumber, type: msg.location ? 'text' : msg.type, classification,
     textContent: msg.location ? locationText(msg.location) : msg.text?.body ?? null, caption: msg.image?.caption ?? null,
     waMediaId, mimeType: msg.image?.mime_type ?? msg.video?.mime_type ?? msg.document?.mime_type ?? msg.audio?.mime_type ?? null,
     receivedAt: new Date(parseInt(msg.timestamp) * 1000),
   }
+  // The submission can close between the lookup above and now; the message then opens the next one, if it may.
+  const recorded = await recordMessage(db, brokerId, fromNumber, decide(state, classification, 'none').store, parsed)
+  if (!recorded) { console.log(`[webhook] Message ${msg.id} not recorded (already recorded, or nothing open to add it to)`); return }
+  console.log(`[webhook] Message ${msg.id} recorded in ${recorded.status} submission ${recorded.id}`)
 
-  await addMessageToSession(db, sessionId, brokerId, parsed, storagePath)
-  console.log(`[webhook] Message ${msg.id} stored in session ${sessionId}`)
+  if (waMediaId) await storeMedia(msg.id, recorded.id, waMediaId)
+
+  // "done": build now. The submission keeps taking messages until the reply goes out.
+  if (decision.finalize && recorded.status === 'COLLECTING') await buildListing(recorded.id)
 }
 
-/** DONE: wait for the messages sent just before it to be saved, then close the submission and build it. */
-async function buildListing(msg: WAMessage, brokerId: string, classification: MessageClassification) {
-  const sessionId = await waitForSettledSession(db, brokerId)
-  if (!sessionId) { console.log(`[webhook] DONE from ${msg.from} but nothing was sent to build`); return }
+/** Copies a photo or video from WhatsApp to storage, trying twice. Its message is marked ready or failed either way. */
+async function storeMedia(waMessageId: string, sessionId: string, waMediaId: string) {
+  let storagePath: string | null = null
+  for (let attempt = 1; attempt <= 2 && !storagePath; attempt++) {
+    try {
+      const { bytes, mimeType } = await downloadWAMedia(waMediaId)
+      const path = `submissions/${sessionId}/${waMessageId}.${mimeToExtension(mimeType)}`
+      const result = await uploadToR2(path, bytes, mimeType)
+      if (result.success) storagePath = path
+      else console.warn(`[webhook] Media upload failed (attempt ${attempt}): ${result.error}`)
+    } catch (err) { console.warn(`[webhook] Media download failed (attempt ${attempt}): ${err}`) }
+  }
+  await setMediaResult(db, waMessageId, storagePath)
+  console.log(`[webhook] Media for ${waMessageId} ${storagePath ? `stored at ${storagePath}` : 'failed'}`)
+}
 
-  await addMessageToSession(db, sessionId, brokerId, {
-    waMessageId: msg.id, fromNumber: msg.from, type: 'text', classification,
-    textContent: msg.text?.body ?? null, caption: null, waMediaId: null, mimeType: null,
-    receivedAt: new Date(parseInt(msg.timestamp) * 1000),
-  }, null)
-
+/** Moves the submission to PROCESSING and starts process-submission, which builds the listing and replies. */
+async function buildListing(sessionId: string) {
   if (!(await finalizeSession(db, sessionId))) {
     console.log(`[webhook] Session ${sessionId} was already finalized — not building it twice`)
     return
   }
   console.log(`[webhook] Session ${sessionId} finalized — triggering processing`)
-  // Awaited so the function isn't shut down before the request goes out.
+  // Awaited so the function isn't shut down before the request goes out. process-submission answers at once.
   const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-submission`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },

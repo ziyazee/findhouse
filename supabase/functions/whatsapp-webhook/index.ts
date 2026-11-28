@@ -1,13 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifyMessage } from '../_shared/messageClassifier.ts'
 import {
-  getActiveSession,
-  createSession,
-  addMessageToSession,
+  getOpenSession,
+  recordMessage,
+  setMediaResult,
   finalizeSession,
-  hasProcessingSession,
   isDuplicate,
-  waitForSettledSession,
 } from '../_shared/sessionManager.ts'
 import {
   verifyWebhookSignature,
@@ -131,49 +129,16 @@ async function handleMessage(msg: WAMessage) {
   console.log(`[webhook] Classification: ${classification}`)
 
   // ── 4. Decide: keep it, build, or ignore (see _shared/conversation.ts) ───
-  const active = await getActiveSession(db, brokerId)
-  const session: SessionState = active
-    ? 'collecting'
-    : broker.plan === 'trial' && await hasProcessingSession(db, brokerId) ? 'processing' : 'none'
-  const decision = decide({ plan: broker.plan, trialUsed: broker.trialUsed }, classification, session)
+  const open = await getOpenSession(db, brokerId)
+  const session: SessionState = !open ? 'none' : open.status === 'PROCESSING' ? 'processing' : 'collecting'
+  const state = { plan: broker.plan, trialUsed: broker.trialUsed }
+  const decision = decide(state, classification, session)
   console.log(`[webhook] ${broker.plan} broker, session ${session}:`, decision)
 
   if (!decision.store) return
-  if (decision.finalize) return buildListing(msg, brokerId, classification)
 
-  // ── 5. Session routing ────────────────────────────────────────────────────
-  let sessionId: string
-  if (active) {
-    sessionId = active.id
-  } else {
-    sessionId = await createSession(db, brokerId, fromNumber)
-    console.log(`[webhook] New session created: ${sessionId}`)
-  }
-
-  // ── 5. Download media if applicable ──────────────────────────────────────
-  let storagePath: string | null = null
+  // ── 5. Record it at once, before fetching any photo, so a build in progress knows it is coming ───────────────
   const waMediaId = getMediaId(msg)
-
-  if (waMediaId) {
-    try {
-      const { bytes, mimeType } = await downloadWAMedia(waMediaId)
-      const ext = mimeToExtension(mimeType)
-      const path = `submissions/${sessionId}/${msg.id}.${ext}`
-
-      const result = await uploadToR2(path, bytes, mimeType)
-
-      if (!result.success) {
-        console.warn(`[webhook] Media upload failed: ${result.error}`)
-      } else {
-        storagePath = path
-      }
-    } catch (err) {
-      console.warn(`[webhook] Media download failed: ${err}`)
-      // Continue without media — don't fail the whole message
-    }
-  }
-
-  // ── 6. Store message ──────────────────────────────────────────────────────
   const parsed: ParsedMessage = {
     waMessageId: msg.id,
     fromNumber,
@@ -186,37 +151,49 @@ async function handleMessage(msg: WAMessage) {
     receivedAt: new Date(parseInt(msg.timestamp) * 1000),
   }
 
-  await addMessageToSession(db, sessionId, brokerId, parsed, storagePath)
-  console.log(`[webhook] Message ${msg.id} stored in session ${sessionId}`)
-}
-
-/** DONE: wait for the messages sent just before it to be saved, then close the submission and build it. */
-async function buildListing(msg: WAMessage, brokerId: string, classification: ParsedMessage['classification']) {
-  const sessionId = await waitForSettledSession(db, brokerId)
-  if (!sessionId) {
-    console.log(`[webhook] DONE from ${msg.from} but nothing was sent to build`)
+  // The submission can close between the lookup above and now; the message then opens the next one, if it may.
+  const recorded = await recordMessage(db, brokerId, fromNumber, decide(state, classification, 'none').store, parsed)
+  if (!recorded) {
+    console.log(`[webhook] Message ${msg.id} not recorded (already recorded, or nothing open to add it to)`)
     return
   }
+  console.log(`[webhook] Message ${msg.id} recorded in ${recorded.status} submission ${recorded.id}`)
 
-  await addMessageToSession(db, sessionId, brokerId, {
-    waMessageId: msg.id,
-    fromNumber: msg.from,
-    type: 'text',
-    classification,
-    textContent: msg.text?.body ?? null,
-    caption: null,
-    waMediaId: null,
-    mimeType: null,
-    receivedAt: new Date(parseInt(msg.timestamp) * 1000),
-  }, null)
+  // ── 6. Fetch the photo or video ──────────────────────────────────────────
+  if (waMediaId) await storeMedia(msg.id, recorded.id, waMediaId)
 
+  // ── 7. "done": build now. The submission keeps taking messages until the reply goes out ─────────────────────
+  if (decision.finalize && recorded.status === 'COLLECTING') await buildListing(recorded.id)
+}
+
+/** Copies a photo or video from WhatsApp to storage, trying twice. Its message is marked ready or failed either way. */
+async function storeMedia(waMessageId: string, sessionId: string, waMediaId: string) {
+  let storagePath: string | null = null
+  for (let attempt = 1; attempt <= 2 && !storagePath; attempt++) {
+    try {
+      const { bytes, mimeType } = await downloadWAMedia(waMediaId)
+      const path = `submissions/${sessionId}/${waMessageId}.${mimeToExtension(mimeType)}`
+      const result = await uploadToR2(path, bytes, mimeType)
+      if (result.success) storagePath = path
+      else console.warn(`[webhook] Media upload failed (attempt ${attempt}): ${result.error}`)
+    } catch (err) {
+      console.warn(`[webhook] Media download failed (attempt ${attempt}): ${err}`)
+    }
+  }
+  await setMediaResult(db, waMessageId, storagePath)
+  console.log(`[webhook] Media for ${waMessageId} ${storagePath ? `stored at ${storagePath}` : 'failed'}`)
+}
+
+/** Moves the submission to PROCESSING and starts process-submission, which builds the listing and replies. */
+async function buildListing(sessionId: string) {
   if (!(await finalizeSession(db, sessionId))) {
     console.log(`[webhook] Session ${sessionId} was already finalized — not building it twice`)
     return
   }
   console.log(`[webhook] Session ${sessionId} finalized — triggering processing`)
 
-  // Awaited so the function isn't shut down before the request goes out.
+  // Awaited so the function isn't shut down before the request goes out. process-submission answers at once and
+  // builds in the background.
   const processUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/process-submission`
   const res = await fetch(processUrl, {
     method: 'POST',
